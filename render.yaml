@@ -19,7 +19,7 @@ services:
         value: "22.13.0"
       - key: EMR_DATA_DIR
         value: /data
-    disks:
-      - name: emr-data
-        mountPath: /data
-        sizeGB: 1
+    disk:
+      name: emr-data
+      mountPath: /data
+      sizeGB: 1
