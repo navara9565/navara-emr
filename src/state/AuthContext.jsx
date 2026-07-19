@@ -1,0 +1,63 @@
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { api, getToken, setToken } from "../api";
+
+const AuthContext = createContext(null);
+
+export const ROLE_LABELS = {
+  admin: "ผู้ดูแลระบบ",
+  doctor: "แพทย์",
+  nurse: "พยาบาล",
+};
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(Boolean(getToken()));
+
+  // Restore session on load.
+  useEffect(() => {
+    if (!getToken()) return;
+    api
+      .me()
+      .then((d) => setUser(d.user))
+      .catch(() => setToken(""))
+      .finally(() => setChecking(false));
+  }, []);
+
+  const login = useCallback(async (username, password) => {
+    const d = await api.login(username, password);
+    setToken(d.token);
+    setUser(d.user);
+    return d.user;
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {
+      // token may already be invalid — clear locally anyway
+    }
+    setToken("");
+    setUser(null);
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      checking,
+      login,
+      logout,
+      canWrite: ["nurse", "doctor", "admin"].includes(user?.role),
+      canDoctorNote: ["doctor", "admin"].includes(user?.role),
+      isAdmin: user?.role === "admin",
+    }),
+    [user, checking, login, logout]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}

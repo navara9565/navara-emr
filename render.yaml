@@ -1,0 +1,25 @@
+# Render.com blueprint — deploy NAVARA EMR in a few clicks.
+# 1) Push this repo to GitHub  2) Render → New → Blueprint → เลือก repo นี้
+#
+# หมายเหตุสำคัญเรื่องข้อมูล:
+# - plan: starter (~$7/เดือน) + disk = ข้อมูลถาวร (แนะนำสำหรับใช้จริง)
+# - ถ้าอยากทดลองฟรี: เปลี่ยน plan เป็น free และลบ section "disks" ออก
+#   (ฟรี = เครื่องหลับเมื่อไม่มีคนใช้ 15 นาที และ "ข้อมูลหายเมื่อเครื่องรีสตาร์ท"
+#    เหมาะกับเดโมเท่านั้น ไม่เหมาะเก็บเวชระเบียนจริง)
+services:
+  - type: web
+    name: navara-emr
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22.13.0"
+      - key: EMR_DATA_DIR
+        value: /data
+    disks:
+      - name: emr-data
+        mountPath: /data
+        sizeGB: 1
