@@ -5,7 +5,7 @@
 // nothing else in the server or frontend needs to change.
 //
 // Schema (SQLite):
-//   users      — login accounts with role (admin/doctor/nurse/family)
+//   users      — login accounts with role (admin/doctor/nurse/pt/ot/caregiver/viewer)
 //   sessions   — bearer tokens
 //   patients   — one row per patient, full record stored as JSON document
 //   bedcounts  — number of beds per room (single JSON row)
@@ -35,7 +35,7 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('admin','doctor','nurse')),
+    role TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS sessions (
@@ -70,7 +70,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS notes (
     id TEXT PRIMARY KEY,
     patient_id TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('doctor','nurse','pt')),
+    kind TEXT NOT NULL,
     ts TEXT NOT NULL,
     date TEXT NOT NULL,
     author TEXT NOT NULL,
@@ -78,6 +78,59 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_notes_patient_kind_ts ON notes(patient_id, kind, ts);
 `);
+
+// Migration: older databases had CHECK (role IN ('admin','doctor','nurse')) on
+// the users table, which blocks the newer roles (pt/ot/caregiver/viewer).
+// SQLite can't drop a CHECK, so rebuild the table once without it — the valid
+// role list is enforced in the API layer instead.
+{
+  const usersSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'").get()?.sql || "";
+  if (usersSql.includes("CHECK")) {
+    db.exec(`
+      BEGIN;
+      CREATE TABLE users_migrate (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      INSERT INTO users_migrate (id, username, password_hash, name, role, created_at)
+        SELECT id, username, password_hash, name, role, created_at FROM users;
+      DROP TABLE users;
+      ALTER TABLE users_migrate RENAME TO users;
+      COMMIT;
+    `);
+    console.log("[db] migrated users table: removed legacy role CHECK constraint");
+  }
+}
+
+// Migration: older notes table restricted kind to doctor/nurse/pt, which blocks
+// the new assessment kinds (adl/fall). Rebuild once without the CHECK.
+{
+  const notesSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notes'").get()?.sql || "";
+  if (notesSql.includes("CHECK")) {
+    db.exec(`
+      BEGIN;
+      CREATE TABLE notes_migrate (
+        id TEXT PRIMARY KEY,
+        patient_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        ts TEXT NOT NULL,
+        date TEXT NOT NULL,
+        author TEXT NOT NULL,
+        payload TEXT NOT NULL
+      );
+      INSERT INTO notes_migrate SELECT id, patient_id, kind, ts, date, author, payload FROM notes;
+      DROP TABLE notes;
+      ALTER TABLE notes_migrate RENAME TO notes;
+      CREATE INDEX IF NOT EXISTS idx_notes_patient_kind_ts ON notes(patient_id, kind, ts);
+      COMMIT;
+    `);
+    console.log("[db] migrated notes table: removed legacy kind CHECK constraint");
+  }
+}
 
 const insertVitalStmt = () =>
   db.prepare("INSERT INTO vitals (id, patient_id, ts, date, time, temp, sys, dia, hr, rr, spo2, recorded_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
@@ -121,7 +174,7 @@ export function seedIfEmpty() {
       ins.run(split.doc.id, JSON.stringify(split.doc));
       storeSplit(split);
     }
-    console.log("[db] seeded demo patients (vitals/notes in dedicated tables)");
+    console.log("[db] patients table initialized (starts empty — admit real patients via the app)");
   } else {
     // Migration: move embedded vitals/notes arrays out of older patient docs.
     const legacy = db.prepare("SELECT id, doc FROM patients").all()

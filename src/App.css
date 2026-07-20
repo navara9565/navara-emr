@@ -1220,6 +1220,40 @@
 .bedcard-cta { font-size: 20px; font-weight: 800; color: var(--color-primary-text); }
 .bedcard-steps { font-size: 13.5px; color: var(--color-text-muted); line-height: 1.6; }
 
+/* ===== printable sheet: QR card per bed ===== */
+.allcards-page { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+.allcards-hint { font-size: 13.5px; color: var(--color-text-muted); margin: -6px 0 20px; }
+.allcards-floor { margin-bottom: 22px; break-inside: avoid; }
+.allcards-floor-title {
+  font-size: 15px; font-weight: 800; color: var(--color-text-heading-strong);
+  padding-bottom: 6px; margin-bottom: 12px; border-bottom: 1.5px solid var(--color-border-row);
+}
+.allcards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.minicard {
+  border: 1.5px dashed var(--color-border-input);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  background: white;
+}
+.minicard-head {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--color-brand-text);
+}
+.minicard-bed { font-size: 13px; font-weight: 800; color: var(--color-text-heading-strong); }
+.minicard-qr { padding: 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.minicard-cta { font-size: 10.5px; font-weight: 700; color: var(--color-primary-text); }
+
 /* ===== login ===== */
 .login-page {
   min-height: 100vh;
@@ -1612,4 +1646,53 @@
   .cal-grid { min-width: 0; }
   .bedcard-page { padding: 0; }
   .bedcard { border-width: 2px; }
+  .allcards-page { padding: 0; max-width: 100%; }
+  .allcards-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ===== assessments (ADL / Fall) ===== */
+.empty-hint { color: var(--color-text-muted-2); font-size: 14.5px; padding: 16px 4px; }
+.assess-item { border-top: 1px solid var(--color-border-row); padding-top: 12px; }
+.assess-item-label { font-size: 14.5px; font-weight: 700; color: var(--color-text-heading-strong); margin-bottom: 8px; }
+.assess-options { display: flex; flex-direction: column; gap: 6px; }
+.assess-opt {
+  display: flex; align-items: flex-start; gap: 8px; cursor: pointer;
+  border: 1px solid var(--color-border-input); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-size: 14px; transition: border-color .15s, background .15s;
+}
+.assess-opt:hover { border-color: var(--color-primary); }
+.assess-opt.active { border-color: var(--color-primary); background: var(--color-primary-badge-bg); }
+.assess-opt input { margin-top: 3px; }
+.assess-opt-score {
+  flex-shrink: 0; min-width: 26px; text-align: center; font-weight: 800;
+  color: var(--color-primary-text); background: var(--color-panel-2);
+  border-radius: 6px; padding: 1px 6px;
+}
+.assess-opt-text { line-height: 1.45; }
+.assess-live {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  border-top: 1px dashed var(--color-border-dashed); padding-top: 12px;
+  font-size: 15px;
+}
+.assess-live b { font-size: 18px; color: var(--color-text-heading-strong); }
+.assess-hint { color: var(--color-text-muted-2); font-size: 13px; }
+.assess-factors { display: flex; flex-direction: column; gap: 6px; }
+.assess-factor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.chk-chip {
+  display: flex; align-items: flex-start; gap: 7px; cursor: pointer;
+  border: 1px solid var(--color-border-input); border-radius: var(--radius-sm);
+  padding: 7px 9px; font-size: 13.5px; line-height: 1.4; transition: border-color .15s, background .15s;
+}
+.chk-chip:hover { border-color: var(--color-primary); }
+.chk-chip.active { border-color: var(--color-primary); background: var(--color-primary-badge-bg); }
+.chk-chip input { margin-top: 2px; }
+.assess-signer { font-size: 13.5px; color: var(--color-text-muted-2); margin-bottom: 4px; }
+.assess-detail { font-size: 13.5px; color: var(--color-text-body); margin: 4px 0; line-height: 1.5; }
+.assess-breakdown { margin-top: 8px; border-top: 1px solid var(--color-border-row); padding-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.assess-bd-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.assess-bd-label { color: var(--color-text-muted-2); flex: 1; }
+.assess-bd-val { color: var(--color-text-body); font-weight: 600; text-align: right; flex-shrink: 0; max-width: 55%; }
+@media (max-width: 640px) {
+  .assess-bd-row { flex-direction: column; gap: 1px; }
+  .assess-bd-val { text-align: left; max-width: 100%; }
 }

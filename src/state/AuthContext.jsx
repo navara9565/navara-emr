@@ -7,6 +7,10 @@ export const ROLE_LABELS = {
   admin: "ผู้ดูแลระบบ",
   doctor: "แพทย์",
   nurse: "พยาบาล",
+  pt: "นักกายภาพบำบัด",
+  ot: "นักกิจกรรมบำบัด",
+  caregiver: "ผู้ดูแลผู้ป่วย",
+  viewer: "อื่นๆ (ดูอย่างเดียว)",
 };
 
 export function AuthProvider({ children }) {
@@ -46,7 +50,14 @@ export function AuthProvider({ children }) {
       checking,
       login,
       logout,
+      // สิทธิ์บันทึกทั่วไป (ประวัติ ยา nurse note จำหน่าย ฯลฯ)
       canWrite: ["nurse", "doctor", "admin"].includes(user?.role),
+      // สิทธิ์บันทึก Vital Signs (รวมสแกน QR ปลายเตียง)
+      canVitals: ["nurse", "doctor", "admin", "pt", "ot", "caregiver"].includes(user?.role),
+      // สิทธิ์บันทึก PT/OT Note
+      canPtNote: ["nurse", "doctor", "admin", "pt", "ot"].includes(user?.role),
+      // สิทธิ์บันทึกแบบประเมิน ADL / Fall (รวมนักกายภาพ/กิจกรรมบำบัด)
+      canAssess: ["nurse", "doctor", "admin", "pt", "ot"].includes(user?.role),
       canDoctorNote: ["doctor", "admin"].includes(user?.role),
       isAdmin: user?.role === "admin",
     }),

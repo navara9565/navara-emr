@@ -1,7 +1,8 @@
-// Deep link a bedside QR should open: the scan-to-log page for this patient.
-export function scanUrl(patientId) {
+// Deep link keyed by the physical bed, not the patient — stays correct
+// across admissions/discharges so the printed card never needs reprinting.
+export function scanBedUrl(bedId) {
   const base = window.location.href.split("#")[0];
-  return base + "#/scan/" + patientId;
+  return base + "#/scan-bed/" + encodeURIComponent(bedId);
 }
 
 // Common nursing vital-sign rounds (each time period of the day).

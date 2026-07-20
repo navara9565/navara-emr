@@ -1,7 +1,7 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { usePatient } from "../state/PatientsContext";
-import { scanUrl } from "../utils/qr";
+import { scanBedUrl } from "../utils/qr";
 import { bedLabel } from "../data/beds";
 import { TreeMark } from "../components/Logo";
 
@@ -32,7 +32,7 @@ export default function BedCardPage() {
         <div className="bedcard-sub">{patient.age} ปี · {patient.gender} · {patient.diagnosis}</div>
 
         <div className="bedcard-qr">
-          <QRCodeSVG value={scanUrl(patient.id)} size={240} level="M" marginSize={2} />
+          <QRCodeSVG value={scanBedUrl(patient.bed)} size={240} level="M" marginSize={2} />
         </div>
 
         <div className="bedcard-cta">สแกนเพื่อบันทึกสัญญาณชีพ</div>

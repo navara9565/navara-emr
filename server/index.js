@@ -50,6 +50,10 @@ function requireRole(...roles) {
 
 // Which roles may perform each patient-document action.
 const WRITE_ROLES = ["nurse", "doctor", "admin"];
+// Vital signs เปิดกว้างกว่า: นักกายภาพ/กิจกรรมบำบัด และผู้ดูแลผู้ป่วย บันทึกได้ด้วย
+const VITAL_ROLES = [...WRITE_ROLES, "pt", "ot", "caregiver"];
+// ทุกบทบาทที่ระบบรู้จัก (viewer = ดูอย่างเดียว)
+const ALL_ROLES = [...VITAL_ROLES, "viewer"];
 const ACTION_ROLES = {
   saveCover: WRITE_ROLES,
   saveHistory: WRITE_ROLES,
@@ -60,14 +64,16 @@ const ACTION_ROLES = {
   discharge: WRITE_ROLES,
   readmit: WRITE_ROLES,
   saveAppointments: WRITE_ROLES,
-  adminEditLog: ["admin"], // แก้ไข/ลบประวัติการเปลี่ยนแปลงยาย้อนหลัง
+  adminEditLog: WRITE_ROLES, // แก้ไข/ลบประวัติการเปลี่ยนแปลงยา (พยาบาลจัดการยาได้)
 };
 
-// Roles allowed to add each kind of note (vitals use WRITE_ROLES).
+// Roles allowed to add each kind of note (vitals use VITAL_ROLES).
 const NOTE_ROLES = {
   doctor: ["doctor", "admin"],
   nurse: WRITE_ROLES,
-  pt: WRITE_ROLES,
+  pt: [...WRITE_ROLES, "pt", "ot"], // นักกายภาพ/กิจกรรมบำบัด เขียน PT/OT Note ได้
+  adl: [...WRITE_ROLES, "pt", "ot"], // แบบประเมิน ADL (Barthel) — รวมนักกายภาพ/กิจกรรมบำบัด
+  fall: [...WRITE_ROLES, "pt", "ot"], // แบบประเมินความเสี่ยงพลัดตกหกล้ม (Morse)
 };
 
 // Archived (discharged) records may only be modified by admin.
@@ -174,7 +180,7 @@ app.get("/api/patients/:id/vitals/summary", requireAuth, (req, res) => {
   res.json({ months: db.vitalsSummary(req.params.id) });
 });
 
-app.post("/api/patients/:id/vitals", requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
+app.post("/api/patients/:id/vitals", requireAuth, requireRole(...VITAL_ROLES), (req, res) => {
   const patient = db.getPatient(req.params.id);
   if (!patient) return res.status(404).json({ error: "not found" });
   if (!guardArchived(patient, req.user, res)) return;
@@ -342,7 +348,7 @@ app.get("/api/users", requireAuth, requireRole("admin"), (req, res) => {
 
 app.post("/api/users", requireAuth, requireRole("admin"), (req, res) => {
   const { username, password, name, role } = req.body || {};
-  if (!username || !password || !name || !["admin", "doctor", "nurse"].includes(role)) {
+  if (!username || !password || !name || !ALL_ROLES.includes(role)) {
     return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
   }
   if (String(password).length < 8) return res.status(400).json({ error: "รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร" });

@@ -1,14 +1,20 @@
+import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { usePatient, usePatients } from "../state/PatientsContext";
+import { usePatients } from "../state/PatientsContext";
 import { useAuth } from "../state/AuthContext";
+import { buildOccupancy, bedLabel } from "../data/beds";
 import BedsideVitalsForm from "../components/BedsideVitalsForm";
 
-export default function ScanVitalsPage() {
-  const { id } = useParams();
+// Entry point for the permanent, bed-mounted QR card: looks up whichever
+// patient currently occupies this physical bed, so the printed card never
+// goes stale across admissions/discharges.
+export default function ScanBedPage() {
+  const { bedId } = useParams();
   const navigate = useNavigate();
-  const patient = usePatient(id);
-  const { loading } = usePatients();
+  const { patients, loading } = usePatients();
   const { canVitals } = useAuth();
+
+  const patient = useMemo(() => buildOccupancy(patients)[bedId], [patients, bedId]);
 
   if (loading) return <div className="app-loading">กำลังโหลดข้อมูล...</div>;
 
@@ -28,8 +34,8 @@ export default function ScanVitalsPage() {
     return (
       <div className="scan-page">
         <div className="scan-card">
-          <div className="scan-title">ไม่พบผู้ป่วย</div>
-          <p className="scan-muted">QR นี้อาจหมดอายุหรือผู้ป่วยถูกจำหน่ายแล้ว</p>
+          <div className="scan-title">เตียงว่าง</div>
+          <p className="scan-muted">{bedLabel(bedId)} ยังไม่มีผู้ป่วยในความดูแลขณะนี้</p>
           <button className="btn-primary" onClick={() => navigate("/")}>กลับหน้าหลัก</button>
         </div>
       </div>

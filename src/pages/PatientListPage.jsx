@@ -113,6 +113,9 @@ export default function PatientListPage() {
             <div className="stat-label">เตียงว่าง</div>
             <div className="stat-value">{capacity - occupied} เตียง</div>
           </div>
+          <button className="btn btn-outline" style={{ alignSelf: "center" }} onClick={() => navigate("/bedcards")}>
+            🖨️ พิมพ์ QR ทุกเตียง
+          </button>
         </div>
       )}
 

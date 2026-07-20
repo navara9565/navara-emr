@@ -33,7 +33,10 @@ const BADGE_CLASS = {
 
 export default function MedicationsTab({ patient, readOnly }) {
   const { addMedication, editMedication, removeMedication, adminEditLog } = usePatients();
-  const { isAdmin } = useAuth();
+  const { canWrite } = useAuth();
+  // ยาปัจจุบันและประวัติการเปลี่ยนแปลงยา: พยาบาล/แพทย์/แอดมิน จัดการได้
+  // (แต่บนเวชระเบียนกลางที่จำหน่ายแล้ว readOnly จะปิดให้เฉพาะแอดมิน)
+  const canEditLog = !readOnly && canWrite;
 
   const [showForm, setShowForm] = useState(false);
   const [medDraft, setMedDraft] = useState(EMPTY_MED);
@@ -304,7 +307,7 @@ export default function MedicationsTab({ patient, readOnly }) {
                 </div>
                 <span className="change-log-date" style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   {c.date}
-                  {isAdmin && (
+                  {canEditLog && (
                     <span className="note-admin-actions print-hide">
                       <button className="btn-link btn-link-primary" onClick={() => startLogEdit(i, c)}>แก้ไข</button>
                       <button className="btn-link btn-link-danger" onClick={() => removeLogEntry(i, c)}>ลบ</button>

@@ -141,6 +141,10 @@ export default function UsersPage() {
             <select className="input" value={form.role} onChange={set("role")}>
               <option value="nurse">พยาบาล — บันทึกข้อมูลทั่วไปได้</option>
               <option value="doctor">แพทย์ — เพิ่ม Doctor Note ได้</option>
+              <option value="pt">นักกายภาพบำบัด — บันทึกได้เฉพาะ PT/OT Note และ Vital Signs</option>
+              <option value="ot">นักกิจกรรมบำบัด — บันทึกได้เฉพาะ PT/OT Note และ Vital Signs</option>
+              <option value="caregiver">ผู้ดูแลผู้ป่วย — บันทึกได้เฉพาะ Vital Signs (รวมสแกน QR)</option>
+              <option value="viewer">อื่นๆ — ดูข้อมูลได้อย่างเดียว</option>
               <option value="admin">ผู้ดูแลระบบ — ทุกสิทธิ์ + แก้ไขเวชระเบียนกลาง + จัดการผู้ใช้</option>
             </select>
           </div>

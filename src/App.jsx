@@ -5,7 +5,9 @@ import PatientListPage from "./pages/PatientListPage";
 import PatientDetailPage from "./pages/PatientDetailPage";
 import AdmitPage from "./pages/AdmitPage";
 import ScanVitalsPage from "./pages/ScanVitalsPage";
+import ScanBedPage from "./pages/ScanBedPage";
 import BedCardPage from "./pages/BedCardPage";
+import AllBedCardsPage from "./pages/AllBedCardsPage";
 import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
 import "./App.css";
@@ -40,7 +42,9 @@ function App() {
             <Route path="/admit" element={<Protected><AdmitPage /></Protected>} />
             <Route path="/users" element={<Protected><UsersPage /></Protected>} />
             <Route path="/scan/:id" element={<Protected><ScanVitalsPage /></Protected>} />
+            <Route path="/scan-bed/:bedId" element={<Protected><ScanBedPage /></Protected>} />
             <Route path="/bedcard/:id" element={<Protected><BedCardPage /></Protected>} />
+            <Route path="/bedcards" element={<Protected><AllBedCardsPage /></Protected>} />
             <Route path="/patient/:id" element={<Protected><RedirectToCoverTab /></Protected>} />
             <Route path="/patient/:id/:tab" element={<Protected><PatientDetailPage /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />

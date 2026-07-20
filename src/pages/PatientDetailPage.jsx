@@ -16,6 +16,7 @@ import MedicationsTab from "../components/tabs/MedicationsTab";
 import DoctorNoteTab from "../components/tabs/DoctorNoteTab";
 import NurseNoteTab from "../components/tabs/NurseNoteTab";
 import PtOtTab from "../components/tabs/PtOtTab";
+import AssessmentsTab from "../components/tabs/AssessmentsTab";
 
 const TAB_COMPONENTS = {
   cover: CoverTab,
@@ -25,6 +26,7 @@ const TAB_COMPONENTS = {
   "doctor-note": DoctorNoteTab,
   "nurse-note": NurseNoteTab,
   "pt-ot": PtOtTab,
+  assessments: AssessmentsTab,
 };
 
 export default function PatientDetailPage() {
@@ -32,7 +34,7 @@ export default function PatientDetailPage() {
   const navigate = useNavigate();
   const patient = usePatient(id);
   const { readmitPatient, loading } = usePatients();
-  const { canWrite, isAdmin } = useAuth();
+  const { canWrite, canVitals, canPtNote, canAssess, isAdmin } = useAuth();
   const [showDischarge, setShowDischarge] = useState(false);
   const [showMoveBed, setShowMoveBed] = useState(false);
   const [showAppointments, setShowAppointments] = useState(false);
@@ -45,6 +47,13 @@ export default function PatientDetailPage() {
   const isDischarged = patient.status === "discharged";
   // Archived records (central archive) are editable by admin only.
   const readOnly = isDischarged ? !isAdmin : !canWrite;
+  // แท็บ Vital Signs และ PT/OT เปิดสิทธิ์กว้างกว่าแท็บอื่น
+  // (นักกายภาพ/กิจกรรมบำบัด/ผู้ดูแลผู้ป่วย บันทึกได้เฉพาะหน้าของตน)
+  const tabReadOnly =
+    tab === "vitals" ? (isDischarged ? !isAdmin : !canVitals)
+    : tab === "pt-ot" ? (isDischarged ? !isAdmin : !canPtNote)
+    : tab === "assessments" ? (isDischarged ? !isAdmin : !canAssess)
+    : readOnly;
 
   // Next upcoming hospital appointment (shown under the header line).
   const today = todayISO();
@@ -155,7 +164,7 @@ export default function PatientDetailPage() {
         ))}
       </div>
 
-      <ActiveTab patient={patient} readOnly={readOnly} />
+      <ActiveTab patient={patient} readOnly={tabReadOnly} />
 
       {showDischarge && <DischargeModal patient={patient} onClose={() => setShowDischarge(false)} />}
       {showMoveBed && <MoveBedModal patient={patient} onClose={() => setShowMoveBed(false)} />}
