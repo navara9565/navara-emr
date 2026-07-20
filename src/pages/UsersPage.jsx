@@ -1,7 +1,101 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { api } from "../api";
-import { useAuth, ROLE_LABELS } from "../state/AuthContext";
+import { useAuth } from "../state/AuthContext";
+import { CAPABILITIES } from "../data/roles";
+
+// Short summary of what a role's capabilities allow (for the dropdown/list).
+function capSummary(caps) {
+  if (caps.admin) return "ทุกสิทธิ์ + จัดการผู้ใช้/บทบาท";
+  const parts = [];
+  if (caps.general) parts.push("ข้อมูลทั่วไป/ยา/Nurse");
+  if (caps.doctorNote) parts.push("Doctor Note");
+  if (caps.ptNote) parts.push("PT/OT");
+  if (caps.vitals) parts.push("Vital Signs");
+  if (caps.assess) parts.push("ประเมิน ADL/Fall");
+  return parts.length ? parts.join(" · ") : "ดูอย่างเดียว";
+}
+
+// Admin-managed roles: list built-in + custom, add/delete custom roles.
+function RolesSection({ roles, reloadRoles }) {
+  const [label, setLabel] = useState("");
+  const [caps, setCaps] = useState({});
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const toggle = (key) => setCaps((c) => ({ ...c, [key]: !c[key] }));
+
+  const add = async () => {
+    setError("");
+    if (!label.trim()) return setError("กรุณาตั้งชื่อบทบาท");
+    if (!Object.values(caps).some(Boolean)) return setError("เลือกสิทธิ์อย่างน้อย 1 อย่าง");
+    setBusy(true);
+    try {
+      await api.createRole({ label: label.trim(), caps });
+      setLabel("");
+      setCaps({});
+      await reloadRoles();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (r) => {
+    if (!window.confirm(`ลบบทบาท "${r.label}"?`)) return;
+    setError("");
+    try {
+      await api.deleteRole(r.slug);
+      await reloadRoles();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <div className="card">
+      <div className="section-title">🧷 บทบาทและสิทธิ์การใช้งาน</div>
+      <div className="stacked-list" style={{ marginBottom: 18 }}>
+        {roles.map((r) => (
+          <div key={r.slug} className="user-row">
+            <div>
+              <div style={{ fontWeight: 700 }}>
+                {r.label}{" "}
+                {r.builtin
+                  ? <span className="pill-chip">มาตรฐาน</span>
+                  : <span className="pill-chip" style={{ background: "var(--color-badge-amber-bg)", color: "var(--color-badge-amber-text)" }}>กำหนดเอง</span>}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--color-text-muted-2)" }}>{capSummary(r.caps)}</div>
+            </div>
+            {!r.builtin && (
+              <button className="btn-danger-sm" onClick={() => remove(r)}>ลบ</button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: "1px solid var(--color-border-row)", paddingTop: 16 }}>
+        <div style={{ fontWeight: 700, marginBottom: 10 }}>+ เพิ่มบทบาทใหม่</div>
+        <div style={{ maxWidth: 360, marginBottom: 12 }}>
+          <span className="field-label">ชื่อบทบาท</span>
+          <input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="เช่น ผู้ช่วยพยาบาล, โภชนากร" />
+        </div>
+        <span className="field-label">สิทธิ์ที่ให้ (ติ๊กได้หลายข้อ)</span>
+        <div className="assess-factor-grid" style={{ marginBottom: 12 }}>
+          {CAPABILITIES.map((c) => (
+            <label key={c.key} className={caps[c.key] ? "chk-chip active" : "chk-chip"}>
+              <input type="checkbox" checked={!!caps[c.key]} onChange={() => toggle(c.key)} />
+              <span>{c.label}</span>
+            </label>
+          ))}
+        </div>
+        {error && <div className="admit-error" style={{ marginBottom: 12 }}>{error}</div>}
+        <button className="btn-primary" onClick={add} disabled={busy}>{busy ? "กำลังบันทึก..." : "เพิ่มบทบาท"}</button>
+      </div>
+    </div>
+  );
+}
 
 function BackupSection() {
   const [backups, setBackups] = useState([]);
@@ -59,17 +153,23 @@ export default function UsersPage() {
   const { isAdmin, user: me } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  const reloadRoles = () => api.listRoles().then((d) => setRoles(d.roles)).catch((e) => setError(e.message));
+
   useEffect(() => {
     if (isAdmin) {
       api.listUsers().then((d) => setUsers(d.users)).catch((e) => setError(e.message));
+      reloadRoles();
     }
   }, [isAdmin]);
 
   if (!isAdmin) return <Navigate to="/" replace />;
+
+  const roleLabel = (slug) => roles.find((r) => r.slug === slug)?.label || slug;
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -121,6 +221,8 @@ export default function UsersPage() {
 
       <BackupSection />
 
+      <RolesSection roles={roles} reloadRoles={reloadRoles} />
+
       <div className="card">
         <div className="section-title">เพิ่มผู้ใช้ใหม่</div>
         <div className="form-grid-2">
@@ -139,13 +241,9 @@ export default function UsersPage() {
           <div>
             <span className="field-label">บทบาท</span>
             <select className="input" value={form.role} onChange={set("role")}>
-              <option value="nurse">พยาบาล — บันทึกข้อมูลทั่วไปได้</option>
-              <option value="doctor">แพทย์ — เพิ่ม Doctor Note ได้</option>
-              <option value="pt">นักกายภาพบำบัด — บันทึกได้เฉพาะ PT/OT Note และ Vital Signs</option>
-              <option value="ot">นักกิจกรรมบำบัด — บันทึกได้เฉพาะ PT/OT Note และ Vital Signs</option>
-              <option value="caregiver">ผู้ดูแลผู้ป่วย — บันทึกได้เฉพาะ Vital Signs (รวมสแกน QR)</option>
-              <option value="viewer">อื่นๆ — ดูข้อมูลได้อย่างเดียว</option>
-              <option value="admin">ผู้ดูแลระบบ — ทุกสิทธิ์ + แก้ไขเวชระเบียนกลาง + จัดการผู้ใช้</option>
+              {roles.map((r) => (
+                <option key={r.slug} value={r.slug}>{r.label} — {capSummary(r.caps)}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -164,7 +262,7 @@ export default function UsersPage() {
               <div>
                 <div style={{ fontWeight: 700 }}>{u.name} {me.id === u.id && <span className="pill-chip">คุณ</span>}</div>
                 <div style={{ fontSize: 13.5, color: "var(--color-text-muted-2)" }}>
-                  {u.username} · <span className="archive-badge" style={{ fontSize: 11.5 }}>{ROLE_LABELS[u.role] || u.role}</span>
+                  {u.username} · <span className="archive-badge" style={{ fontSize: 11.5 }}>{roleLabel(u.role)}</span>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>

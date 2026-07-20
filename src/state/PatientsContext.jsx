@@ -81,6 +81,8 @@ export function PatientsProvider({ children }) {
       saveCover: (id, d) =>
         mutate(id, "saveCover", (p) => ({
           ...p,
+          age: d.age === undefined || d.age === "" ? p.age : parseInt(d.age, 10) || 0,
+          gender: d.gender || p.gender,
           idNumber: d.idNumber,
           address: d.address,
           diagnosis: d.diagnosis,

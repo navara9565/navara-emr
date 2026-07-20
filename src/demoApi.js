@@ -6,13 +6,15 @@ import { generatePatients } from "./data/generatePatients";
 import { INITIAL_BED_COUNTS } from "./data/beds";
 import { splitLegacyDoc } from "./data/splitLegacy";
 import { fmtDate, isAbnormal } from "./utils/format";
+import { BUILTIN_ROLES, builtinRole, isBuiltinRole, resolveCaps } from "./data/roles";
 
 const P_KEY = "demo-emr-patients-v6";
 const V_KEY = "demo-emr-vitals-v3";
 const N_KEY = "demo-emr-notes-v3";
 const B_KEY = "demo-emr-bedcounts-v3";
 const U_KEY = "demo-emr-users-v2";
-const S_KEY = "demo-emr-session-v2";
+const S_KEY = "demo-emr-session-v3";
+const R_KEY = "demo-emr-roles-v1";
 
 const DEFAULT_USERS = [
   { id: 1, username: "admin", password: "admin1234", name: "ผู้ดูแลระบบ", role: "admin" },
@@ -72,11 +74,31 @@ function loadUsers() {
   return DEFAULT_USERS;
 }
 
-const publicUser = (u) => ({ id: u.id, username: u.username, name: u.name, role: u.role });
+// ----- roles / capabilities (mirror of server) -----
+function loadCustomRoles() {
+  return load(R_KEY, []);
+}
+function allRoles() {
+  return [...BUILTIN_ROLES, ...loadCustomRoles()];
+}
+function roleCaps(slug) {
+  const b = builtinRole(slug);
+  if (b) return resolveCaps(b.caps);
+  const c = loadCustomRoles().find((r) => r.slug === slug);
+  return resolveCaps(c ? c.caps : {});
+}
+function roleLabelOf(slug) {
+  return allRoles().find((r) => r.slug === slug)?.label || slug;
+}
+
+const publicUser = (u) => ({
+  id: u.id, username: u.username, name: u.name, role: u.role,
+  caps: roleCaps(u.role), roleLabel: roleLabelOf(u.role),
+});
 const me = () => load(S_KEY, null);
 
 function guardArchivedDemo(patient) {
-  if (patient?.status === "discharged" && me()?.role !== "admin") {
+  if (patient?.status === "discharged" && !me()?.caps?.admin) {
     throw new Error("เวชระเบียนกลางแก้ไขได้เฉพาะผู้ดูแลระบบ");
   }
 }
@@ -322,6 +344,28 @@ export const demoApi = {
   async resetPassword(id, password) {
     if (!password || password.length < 8) throw new Error("รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร");
     save(U_KEY, loadUsers().map((u) => (u.id === Number(id) ? { ...u, password } : u)));
+    return { ok: true };
+  },
+
+  // ----- roles -----
+
+  async listRoles() {
+    return { roles: allRoles() };
+  },
+
+  async createRole({ label, caps }) {
+    if (!label || !label.trim()) throw new Error("กรุณาตั้งชื่อบทบาท");
+    const slug = "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const role = { slug, label: label.trim(), builtin: false, caps: resolveCaps(caps) };
+    save(R_KEY, [...loadCustomRoles(), role]);
+    return { role };
+  },
+
+  async deleteRole(slug) {
+    if (isBuiltinRole(slug)) throw new Error("ลบบทบาทมาตรฐานไม่ได้");
+    const inUse = loadUsers().filter((u) => u.role === slug).length;
+    if (inUse > 0) throw new Error(`ยังมีผู้ใช้ ${inUse} คนใช้บทบาทนี้`);
+    save(R_KEY, loadCustomRoles().filter((r) => r.slug !== slug));
     return { ok: true };
   },
 

@@ -48,6 +48,9 @@ const realApi = {
   createUser: (u) => request("POST", "/api/users", u),
   deleteUser: (id) => request("DELETE", "/api/users/" + id),
   resetPassword: (id, password) => request("POST", `/api/users/${id}/password`, { password }),
+  listRoles: () => request("GET", "/api/roles"),
+  createRole: (role) => request("POST", "/api/roles", role),
+  deleteRole: (slug) => request("DELETE", "/api/roles/" + slug),
 
   listVitals: (id, days) => request("GET", `/api/patients/${id}/vitals?days=${days}`),
   vitalsSummary: (id) => request("GET", `/api/patients/${id}/vitals/summary`),

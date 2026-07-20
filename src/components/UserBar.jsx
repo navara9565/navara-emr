@@ -9,7 +9,7 @@ export default function UserBar() {
   return (
     <div className="userbar print-hide">
       <span className="userbar-chip" title={user.username}>
-        👤 {user.name} · {ROLE_LABELS[user.role] || user.role}
+        👤 {user.name} · {user.roleLabel || ROLE_LABELS[user.role] || user.role}
       </span>
       {isAdmin && (
         <button className="userbar-btn" onClick={() => navigate("/users")}>⚙️ ผู้ใช้งาน</button>

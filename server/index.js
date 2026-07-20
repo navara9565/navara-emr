@@ -34,51 +34,52 @@ function tokenFrom(req) {
   return h.startsWith("Bearer ") ? h.slice(7) : null;
 }
 
+// Attach the session user plus its resolved capability set.
+function withCaps(user) {
+  return { ...user, caps: db.getRoleCaps(user.role), roleLabel: db.getRoleLabel(user.role) };
+}
+
 function requireAuth(req, res, next) {
   const user = db.getSessionUser(tokenFrom(req));
   if (!user) return res.status(401).json({ error: "unauthorized" });
-  req.user = user;
+  req.user = withCaps(user);
   next();
 }
 
-function requireRole(...roles) {
+// Gate a route on a capability (admin implies all — see resolveCaps).
+function requireCap(cap) {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) return res.status(403).json({ error: "forbidden", need: roles });
+    if (!req.user.caps[cap]) return res.status(403).json({ error: "forbidden", need: cap });
     next();
   };
 }
 
-// Which roles may perform each patient-document action.
-const WRITE_ROLES = ["nurse", "doctor", "admin"];
-// Vital signs เปิดกว้างกว่า: นักกายภาพ/กิจกรรมบำบัด และผู้ดูแลผู้ป่วย บันทึกได้ด้วย
-const VITAL_ROLES = [...WRITE_ROLES, "pt", "ot", "caregiver"];
-// ทุกบทบาทที่ระบบรู้จัก (viewer = ดูอย่างเดียว)
-const ALL_ROLES = [...VITAL_ROLES, "viewer"];
-const ACTION_ROLES = {
-  saveCover: WRITE_ROLES,
-  saveHistory: WRITE_ROLES,
-  addMedication: WRITE_ROLES,
-  editMedication: WRITE_ROLES,
-  removeMedication: WRITE_ROLES,
-  moveBed: WRITE_ROLES,
-  discharge: WRITE_ROLES,
-  readmit: WRITE_ROLES,
-  saveAppointments: WRITE_ROLES,
-  adminEditLog: WRITE_ROLES, // แก้ไข/ลบประวัติการเปลี่ยนแปลงยา (พยาบาลจัดการยาได้)
+// Each patient-document action requires one capability.
+const ACTION_CAP = {
+  saveCover: "general",
+  saveHistory: "general",
+  addMedication: "general",
+  editMedication: "general",
+  removeMedication: "general",
+  moveBed: "general",
+  discharge: "general",
+  readmit: "general",
+  saveAppointments: "general",
+  adminEditLog: "general", // แก้ไข/ลบประวัติการเปลี่ยนแปลงยา (พยาบาลจัดการยาได้)
 };
 
-// Roles allowed to add each kind of note (vitals use VITAL_ROLES).
-const NOTE_ROLES = {
-  doctor: ["doctor", "admin"],
-  nurse: WRITE_ROLES,
-  pt: [...WRITE_ROLES, "pt", "ot"], // นักกายภาพ/กิจกรรมบำบัด เขียน PT/OT Note ได้
-  adl: [...WRITE_ROLES, "pt", "ot"], // แบบประเมิน ADL (Barthel) — รวมนักกายภาพ/กิจกรรมบำบัด
-  fall: [...WRITE_ROLES, "pt", "ot"], // แบบประเมินความเสี่ยงพลัดตกหกล้ม (Morse)
+// Each note kind requires one capability.
+const NOTE_CAP = {
+  doctor: "doctorNote",
+  nurse: "general",
+  pt: "ptNote",
+  adl: "assess",
+  fall: "assess",
 };
 
-// Archived (discharged) records may only be modified by admin.
+// Archived (discharged) records may only be modified by admins.
 function guardArchived(patient, user, res) {
-  if (patient.status === "discharged" && user.role !== "admin") {
+  if (patient.status === "discharged" && !user.caps.admin) {
     res.status(403).json({ error: "เวชระเบียนกลางแก้ไขได้เฉพาะผู้ดูแลระบบ" });
     return false;
   }
@@ -125,7 +126,7 @@ app.post("/api/login", (req, res) => {
     return res.status(401).json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
   }
   const token = db.createSession(user.id);
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role } });
+  res.json({ token, user: withCaps({ id: user.id, username: user.username, name: user.name, role: user.role }) });
 });
 
 app.post("/api/logout", requireAuth, (req, res) => {
@@ -145,7 +146,7 @@ app.get("/api/patients", requireAuth, (req, res) => {
 
 // Admit a new patient (client builds the full record; embedded vitals/notes
 // from the admission form are split into their own tables).
-app.post("/api/patients", requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
+app.post("/api/patients", requireAuth, requireCap("general"), (req, res) => {
   const p = req.body?.patient;
   if (!p || !p.id || !p.name) return res.status(400).json({ error: "invalid patient" });
   if (db.getPatient(p.id)) return res.status(409).json({ error: "duplicate id" });
@@ -157,9 +158,9 @@ app.post("/api/patients", requireAuth, requireRole(...WRITE_ROLES), (req, res) =
 // Apply an action: client sends the updated full document + action name.
 app.put("/api/patients/:id", requireAuth, (req, res) => {
   const { action, patient } = req.body || {};
-  const allowed = ACTION_ROLES[action];
-  if (!allowed) return res.status(400).json({ error: "unknown action" });
-  if (!allowed.includes(req.user.role)) return res.status(403).json({ error: "forbidden" });
+  const cap = ACTION_CAP[action];
+  if (!cap) return res.status(400).json({ error: "unknown action" });
+  if (!req.user.caps[cap]) return res.status(403).json({ error: "forbidden" });
   if (!patient || patient.id !== req.params.id) return res.status(400).json({ error: "invalid patient doc" });
   const existing = db.getPatient(req.params.id);
   if (!existing) return res.status(404).json({ error: "not found" });
@@ -180,7 +181,7 @@ app.get("/api/patients/:id/vitals/summary", requireAuth, (req, res) => {
   res.json({ months: db.vitalsSummary(req.params.id) });
 });
 
-app.post("/api/patients/:id/vitals", requireAuth, requireRole(...VITAL_ROLES), (req, res) => {
+app.post("/api/patients/:id/vitals", requireAuth, requireCap("vitals"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   if (!patient) return res.status(404).json({ error: "not found" });
   if (!guardArchived(patient, req.user, res)) return;
@@ -233,7 +234,7 @@ function refreshLastVital(patient, actor) {
 }
 
 // Admin-only: correct or remove a saved vital entry.
-app.put("/api/patients/:id/vitals/:vid", requireAuth, requireRole("admin"), (req, res) => {
+app.put("/api/patients/:id/vitals/:vid", requireAuth, requireCap("admin"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getVital(req.params.vid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
@@ -252,7 +253,7 @@ app.put("/api/patients/:id/vitals/:vid", requireAuth, requireRole("admin"), (req
   res.json({ ok: true, vital });
 });
 
-app.delete("/api/patients/:id/vitals/:vid", requireAuth, requireRole("admin"), (req, res) => {
+app.delete("/api/patients/:id/vitals/:vid", requireAuth, requireCap("admin"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getVital(req.params.vid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
@@ -266,7 +267,7 @@ app.delete("/api/patients/:id/vitals/:vid", requireAuth, requireRole("admin"), (
 
 app.get("/api/patients/:id/notes", requireAuth, (req, res) => {
   const kind = String(req.query.kind || "");
-  if (!NOTE_ROLES[kind]) return res.status(400).json({ error: "invalid kind" });
+  if (!NOTE_CAP[kind]) return res.status(400).json({ error: "invalid kind" });
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || "20", 10) || 20));
   const offset = Math.max(0, parseInt(req.query.offset || "0", 10) || 0);
   res.json(db.listNotes(req.params.id, kind, limit, offset));
@@ -274,9 +275,9 @@ app.get("/api/patients/:id/notes", requireAuth, (req, res) => {
 
 app.post("/api/patients/:id/notes", requireAuth, (req, res) => {
   const { kind, author, payload } = req.body || {};
-  const allowed = NOTE_ROLES[kind];
-  if (!allowed) return res.status(400).json({ error: "invalid kind" });
-  if (!allowed.includes(req.user.role)) return res.status(403).json({ error: "forbidden" });
+  const cap = NOTE_CAP[kind];
+  if (!cap) return res.status(400).json({ error: "invalid kind" });
+  if (!req.user.caps[cap]) return res.status(403).json({ error: "forbidden" });
   if (!payload || typeof payload !== "object") return res.status(400).json({ error: "invalid payload" });
   const patient = db.getPatient(req.params.id);
   if (!patient) return res.status(404).json({ error: "not found" });
@@ -297,7 +298,7 @@ app.post("/api/patients/:id/notes", requireAuth, (req, res) => {
 });
 
 // Admin-only: correct or remove a saved note.
-app.put("/api/patients/:id/notes/:nid", requireAuth, requireRole("admin"), (req, res) => {
+app.put("/api/patients/:id/notes/:nid", requireAuth, requireCap("admin"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getNote(req.params.nid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
@@ -308,7 +309,7 @@ app.put("/api/patients/:id/notes/:nid", requireAuth, requireRole("admin"), (req,
   res.json({ ok: true, note });
 });
 
-app.delete("/api/patients/:id/notes/:nid", requireAuth, requireRole("admin"), (req, res) => {
+app.delete("/api/patients/:id/notes/:nid", requireAuth, requireCap("admin"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getNote(req.params.nid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
@@ -319,11 +320,11 @@ app.delete("/api/patients/:id/notes/:nid", requireAuth, requireRole("admin"), (r
 
 // ---------- backup ----------
 
-app.get("/api/backups", requireAuth, requireRole("admin"), (req, res) => {
+app.get("/api/backups", requireAuth, requireCap("admin"), (req, res) => {
   res.json({ backups: db.listBackups() });
 });
 
-app.get("/api/backup", requireAuth, requireRole("admin"), (req, res) => {
+app.get("/api/backup", requireAuth, requireCap("admin"), (req, res) => {
   const day = new Date().toISOString().slice(0, 10);
   const tmp = join(tmpdir(), `emr-backup-${day}-${Date.now()}.db`);
   db.backupTo(tmp);
@@ -332,7 +333,7 @@ app.get("/api/backup", requireAuth, requireRole("admin"), (req, res) => {
 
 // ---------- bed counts ----------
 
-app.put("/api/bedcounts", requireAuth, requireRole(...WRITE_ROLES), (req, res) => {
+app.put("/api/bedcounts", requireAuth, requireCap("general"), (req, res) => {
   const counts = req.body?.bedCounts;
   if (!counts || typeof counts !== "object") return res.status(400).json({ error: "invalid" });
   db.setBedCounts(counts);
@@ -342,21 +343,21 @@ app.put("/api/bedcounts", requireAuth, requireRole(...WRITE_ROLES), (req, res) =
 
 // ---------- user management (admin) ----------
 
-app.get("/api/users", requireAuth, requireRole("admin"), (req, res) => {
+app.get("/api/users", requireAuth, requireCap("admin"), (req, res) => {
   res.json({ users: db.listUsers() });
 });
 
-app.post("/api/users", requireAuth, requireRole("admin"), (req, res) => {
+app.post("/api/users", requireAuth, requireCap("admin"), (req, res) => {
   const { username, password, name, role } = req.body || {};
-  if (!username || !password || !name || !ALL_ROLES.includes(role)) {
-    return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน" });
+  if (!username || !password || !name || !role || !db.roleExists(role)) {
+    return res.status(400).json({ error: "ข้อมูลไม่ครบถ้วน หรือบทบาทไม่ถูกต้อง" });
   }
   if (String(password).length < 8) return res.status(400).json({ error: "รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร" });
   if (db.findUserByUsername(username)) return res.status(409).json({ error: "ชื่อผู้ใช้นี้มีอยู่แล้ว" });
   res.json({ user: db.createUser({ username, password, name, role }) });
 });
 
-app.delete("/api/users/:id", requireAuth, requireRole("admin"), (req, res) => {
+app.delete("/api/users/:id", requireAuth, requireCap("admin"), (req, res) => {
   const target = db.getUserById(Number(req.params.id));
   if (!target) return res.status(404).json({ error: "not found" });
   if (target.role === "admin" && db.countAdmins() <= 1) {
@@ -369,10 +370,34 @@ app.delete("/api/users/:id", requireAuth, requireRole("admin"), (req, res) => {
 app.post("/api/users/:id/password", requireAuth, (req, res) => {
   const targetId = Number(req.params.id);
   const { password } = req.body || {};
-  if (req.user.role !== "admin" && req.user.id !== targetId) return res.status(403).json({ error: "forbidden" });
+  if (!req.user.caps.admin && req.user.id !== targetId) return res.status(403).json({ error: "forbidden" });
   if (!password || String(password).length < 8) return res.status(400).json({ error: "รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร" });
   if (!db.getUserById(targetId)) return res.status(404).json({ error: "not found" });
   db.resetPassword(targetId, String(password));
+  res.json({ ok: true });
+});
+
+// ---------- role management (admin) ----------
+
+app.get("/api/roles", requireAuth, requireCap("admin"), (req, res) => {
+  res.json({ roles: db.listRoles() });
+});
+
+app.post("/api/roles", requireAuth, requireCap("admin"), (req, res) => {
+  const { label, caps } = req.body || {};
+  if (!label || !String(label).trim()) return res.status(400).json({ error: "กรุณาตั้งชื่อบทบาท" });
+  if (!caps || typeof caps !== "object") return res.status(400).json({ error: "กรุณาเลือกสิทธิ์อย่างน้อย 1 อย่าง" });
+  res.json({ role: db.createRole({ label: String(label).trim(), caps }) });
+});
+
+app.delete("/api/roles/:slug", requireAuth, requireCap("admin"), (req, res) => {
+  const slug = req.params.slug;
+  if (db.isBuiltin(slug)) {
+    return res.status(400).json({ error: "ลบบทบาทมาตรฐานไม่ได้" });
+  }
+  const inUse = db.countUsersWithRole(slug);
+  if (inUse > 0) return res.status(400).json({ error: `ยังมีผู้ใช้ ${inUse} คนใช้บทบาทนี้ — เปลี่ยนบทบาทของผู้ใช้เหล่านั้นก่อน` });
+  db.deleteRole(slug);
   res.json({ ok: true });
 });
 

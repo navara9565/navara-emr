@@ -44,25 +44,22 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(
-    () => ({
+  const value = useMemo(() => {
+    // Capabilities are resolved on the server (role → caps) and admin implies all.
+    const caps = user?.caps || {};
+    return {
       user,
       checking,
       login,
       logout,
-      // สิทธิ์บันทึกทั่วไป (ประวัติ ยา nurse note จำหน่าย ฯลฯ)
-      canWrite: ["nurse", "doctor", "admin"].includes(user?.role),
-      // สิทธิ์บันทึก Vital Signs (รวมสแกน QR ปลายเตียง)
-      canVitals: ["nurse", "doctor", "admin", "pt", "ot", "caregiver"].includes(user?.role),
-      // สิทธิ์บันทึก PT/OT Note
-      canPtNote: ["nurse", "doctor", "admin", "pt", "ot"].includes(user?.role),
-      // สิทธิ์บันทึกแบบประเมิน ADL / Fall (รวมนักกายภาพ/กิจกรรมบำบัด)
-      canAssess: ["nurse", "doctor", "admin", "pt", "ot"].includes(user?.role),
-      canDoctorNote: ["doctor", "admin"].includes(user?.role),
-      isAdmin: user?.role === "admin",
-    }),
-    [user, checking, login, logout]
-  );
+      canWrite: !!caps.general,       // ข้อมูลทั่วไป/ประวัติ/ยา/Nurse Note/จำหน่าย/นัด/เตียง
+      canVitals: !!caps.vitals,       // Vital Signs (รวมสแกน QR ปลายเตียง)
+      canPtNote: !!caps.ptNote,       // PT/OT Note
+      canAssess: !!caps.assess,       // แบบประเมิน ADL / Fall
+      canDoctorNote: !!caps.doctorNote,
+      isAdmin: !!caps.admin,
+    };
+  }, [user, checking, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -19,6 +19,7 @@ import bcrypt from "bcryptjs";
 import { generatePatients } from "../src/data/generatePatients.js";
 import { INITIAL_BED_COUNTS } from "../src/data/beds.js";
 import { splitLegacyDoc, isLegacyDoc } from "../src/data/splitLegacy.js";
+import { BUILTIN_ROLES, builtinRole, isBuiltinRole, resolveCaps } from "../src/data/roles.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.EMR_DATA_DIR || join(__dirname, "data");
@@ -77,6 +78,12 @@ db.exec(`
     payload TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_notes_patient_kind_ts ON notes(patient_id, kind, ts);
+  CREATE TABLE IF NOT EXISTS custom_roles (
+    slug TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    caps TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Migration: older databases had CHECK (role IN ('admin','doctor','nurse')) on
@@ -252,6 +259,56 @@ export function countAdmins() {
 
 export function getUserById(id) {
   return db.prepare("SELECT id, username, name, role FROM users WHERE id = ?").get(id);
+}
+
+// ---------- roles ----------
+
+function customRoleRow(slug) {
+  const r = db.prepare("SELECT slug, label, caps FROM custom_roles WHERE slug = ?").get(slug);
+  return r ? { slug: r.slug, label: r.label, builtin: false, caps: JSON.parse(r.caps) } : null;
+}
+
+// All roles the facility can assign: built-in + admin-defined custom.
+export function listRoles() {
+  const custom = db.prepare("SELECT slug, label, caps FROM custom_roles ORDER BY created_at").all()
+    .map((r) => ({ slug: r.slug, label: r.label, builtin: false, caps: JSON.parse(r.caps) }));
+  return [...BUILTIN_ROLES, ...custom];
+}
+
+export function roleExists(slug) {
+  return isBuiltinRole(slug) || Boolean(customRoleRow(slug));
+}
+
+export function isBuiltin(slug) {
+  return isBuiltinRole(slug);
+}
+
+// Resolved capability object for a role slug (unknown role → no capabilities).
+export function getRoleCaps(slug) {
+  const b = builtinRole(slug);
+  if (b) return resolveCaps(b.caps);
+  const c = customRoleRow(slug);
+  return resolveCaps(c ? c.caps : {});
+}
+
+export function getRoleLabel(slug) {
+  const b = builtinRole(slug);
+  if (b) return b.label;
+  return customRoleRow(slug)?.label || slug;
+}
+
+export function createRole({ label, caps }) {
+  const slug = "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  db.prepare("INSERT INTO custom_roles (slug, label, caps) VALUES (?,?,?)").run(slug, label, JSON.stringify(resolveCaps(caps)));
+  return { slug, label, builtin: false, caps: resolveCaps(caps) };
+}
+
+export function deleteRole(slug) {
+  db.prepare("DELETE FROM custom_roles WHERE slug = ?").run(slug);
+}
+
+export function countUsersWithRole(slug) {
+  return db.prepare("SELECT COUNT(*) AS c FROM users WHERE role = ?").get(slug).c;
 }
 
 // ---------- patients ----------

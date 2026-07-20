@@ -4,6 +4,8 @@ import { bedLabel } from "../../data/beds";
 
 function draftFrom(p) {
   return {
+    age: p.age,
+    gender: p.gender,
     idNumber: p.idNumber,
     address: p.address,
     diagnosis: p.diagnosis,
@@ -55,7 +57,19 @@ export default function CoverTab({ patient, readOnly }) {
         </div>
         <div>
           <span className="field-label">ห้อง/เตียง · อายุ · เพศ</span>
-          <div style={{ fontSize: 17 }}>{bedLabel(patient.bed)} · {patient.age} ปี · {patient.gender}</div>
+          {!editing ? (
+            <div style={{ fontSize: 17 }}>{bedLabel(patient.bed)} · {patient.age} ปี · {patient.gender}</div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 15, color: "var(--color-text-muted-2)" }}>{bedLabel(patient.bed)} ·</span>
+              <input className="input" style={{ width: 90 }} inputMode="numeric" value={draft.age} onChange={set("age")} placeholder="อายุ" />
+              <span style={{ fontSize: 15, color: "var(--color-text-muted-2)" }}>ปี</span>
+              <select className="input" style={{ width: 110 }} value={draft.gender} onChange={set("gender")}>
+                <option value="ชาย">ชาย</option>
+                <option value="หญิง">หญิง</option>
+              </select>
+            </div>
+          )}
         </div>
         <div>
           <span className="field-label">เลขบัตรประชาชน</span>
