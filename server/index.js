@@ -165,6 +165,10 @@ app.put("/api/patients/:id", requireAuth, (req, res) => {
   const existing = db.getPatient(req.params.id);
   if (!existing) return res.status(404).json({ error: "not found" });
   if (!guardArchived(existing, req.user, res)) return;
+  // Changing the patient's name is a manager/admin-only capability.
+  if (patient.name !== existing.name && !req.user.caps.editName) {
+    return res.status(403).json({ error: "แก้ไขชื่อผู้ป่วยได้เฉพาะผู้จัดการหรือผู้ดูแลระบบ" });
+  }
   db.upsertPatient(patient);
   broadcast({ type: "patient", patient, by: req.user.username });
   res.json({ ok: true });
@@ -233,11 +237,13 @@ function refreshLastVital(patient, actor) {
   broadcast({ type: "patient", patient: updated, by: actor });
 }
 
-// Admin-only: correct or remove a saved vital entry.
-app.put("/api/patients/:id/vitals/:vid", requireAuth, requireCap("admin"), (req, res) => {
+// Correct or remove a saved vital entry: admin / manager / doctor / nurse
+// (the "general" capability). Discharged records stay admin-only via guardArchived.
+app.put("/api/patients/:id/vitals/:vid", requireAuth, requireCap("general"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getVital(req.params.vid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
+  if (!guardArchived(patient, req.user, res)) return;
   const f = req.body || {};
   const vital = db.updateVitalRow(existing.id, {
     time: f.time || existing.time,
@@ -253,10 +259,11 @@ app.put("/api/patients/:id/vitals/:vid", requireAuth, requireCap("admin"), (req,
   res.json({ ok: true, vital });
 });
 
-app.delete("/api/patients/:id/vitals/:vid", requireAuth, requireCap("admin"), (req, res) => {
+app.delete("/api/patients/:id/vitals/:vid", requireAuth, requireCap("general"), (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getVital(req.params.vid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
+  if (!guardArchived(patient, req.user, res)) return;
   db.deleteVitalRow(existing.id);
   refreshLastVital(patient, req.user.username);
   broadcast({ type: "vital-deleted", patientId: patient.id, vitalId: existing.id, by: req.user.username });
@@ -297,11 +304,19 @@ app.post("/api/patients/:id/notes", requireAuth, (req, res) => {
   res.json({ ok: true, note });
 });
 
-// Admin-only: correct or remove a saved note.
-app.put("/api/patients/:id/notes/:nid", requireAuth, requireCap("admin"), (req, res) => {
+// Who may correct/remove a SAVED note: admins for every kind; additionally,
+// nurse notes may be corrected by anyone with the general capability.
+function mayEditNote(user, kind) {
+  if (user.caps.admin) return true;
+  if (kind === "nurse" && user.caps.general) return true;
+  return false;
+}
+
+app.put("/api/patients/:id/notes/:nid", requireAuth, (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getNote(req.params.nid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
+  if (!mayEditNote(req.user, existing.kind)) return res.status(403).json({ error: "forbidden" });
   const { author, payload } = req.body || {};
   if (!payload || typeof payload !== "object") return res.status(400).json({ error: "invalid payload" });
   const note = db.updateNoteRow(existing.id, { author: author || existing.author, payload });
@@ -309,10 +324,11 @@ app.put("/api/patients/:id/notes/:nid", requireAuth, requireCap("admin"), (req, 
   res.json({ ok: true, note });
 });
 
-app.delete("/api/patients/:id/notes/:nid", requireAuth, requireCap("admin"), (req, res) => {
+app.delete("/api/patients/:id/notes/:nid", requireAuth, (req, res) => {
   const patient = db.getPatient(req.params.id);
   const existing = db.getNote(req.params.nid);
   if (!patient || !existing || existing.patientId !== patient.id) return res.status(404).json({ error: "not found" });
+  if (!mayEditNote(req.user, existing.kind)) return res.status(403).json({ error: "forbidden" });
   db.deleteNoteRow(existing.id);
   broadcast({ type: "note-deleted", patientId: patient.id, kind: existing.kind, noteId: existing.id, by: req.user.username });
   res.json({ ok: true });

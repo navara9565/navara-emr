@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { usePatients } from "../../state/PatientsContext";
+import { useAuth } from "../../state/AuthContext";
 import { bedLabel } from "../../data/beds";
 
 function draftFrom(p) {
   return {
+    name: p.name,
     age: p.age,
     gender: p.gender,
+    admitDate: p.admitDate,
     idNumber: p.idNumber,
     address: p.address,
     diagnosis: p.diagnosis,
@@ -20,6 +23,7 @@ function draftFrom(p) {
 
 export default function CoverTab({ patient, readOnly }) {
   const { saveCover } = usePatients();
+  const { canEditName } = useAuth();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => draftFrom(patient));
 
@@ -52,8 +56,12 @@ export default function CoverTab({ patient, readOnly }) {
 
       <div className="form-grid-2" style={{ marginTop: 14 }}>
         <div>
-          <span className="field-label">ชื่อ-นามสกุล</span>
-          <div style={{ fontSize: 17 }}>{patient.name}</div>
+          <span className="field-label">ชื่อ-นามสกุล{editing && canEditName ? " (แก้ไขได้)" : ""}</span>
+          {!editing || !canEditName ? (
+            <div style={{ fontSize: 17 }}>{patient.name}</div>
+          ) : (
+            <input className="input" value={draft.name} onChange={set("name")} />
+          )}
         </div>
         <div>
           <span className="field-label">ห้อง/เตียง · อายุ · เพศ</span>
@@ -81,7 +89,11 @@ export default function CoverTab({ patient, readOnly }) {
         </div>
         <div>
           <span className="field-label">วันที่รับเข้า</span>
-          <div style={{ fontSize: 17 }}>{patient.admitDate}</div>
+          {!editing ? (
+            <div style={{ fontSize: 17 }}>{patient.admitDate}</div>
+          ) : (
+            <input className="input" value={draft.admitDate} onChange={set("admitDate")} placeholder="เช่น 19 ก.ค. 2569" />
+          )}
         </div>
         <div className="span-2">
           <span className="field-label">ที่อยู่</span>

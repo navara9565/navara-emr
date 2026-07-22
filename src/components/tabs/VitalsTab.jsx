@@ -16,7 +16,10 @@ const RANGES = [
 
 export default function VitalsTab({ patient, readOnly }) {
   const { addVital } = usePatients();
-  const { isAdmin } = useAuth();
+  const { canWrite } = useAuth();
+  // แก้ไข/ลบ Vital Signs ที่บันทึกแล้ว: admin / ผู้จัดการ / แพทย์ / พยาบาล
+  // (เวชระเบียนกลางที่จำหน่ายแล้ว readOnly=true สำหรับทุกคนยกเว้นแอดมิน)
+  const canEditRows = canWrite && !readOnly;
   const [form, setForm] = useState(EMPTY_FORM);
   const [days, setDays] = useState(7);
   const [showSummary, setShowSummary] = useState(false);
@@ -147,22 +150,22 @@ export default function VitalsTab({ patient, readOnly }) {
         {!loading && historyReversed.length === 0 && (
           <div className="app-loading" style={{ padding: 20 }}>ไม่มีข้อมูลในช่วง{RANGES.find((r) => r.days === days)?.label}</div>
         )}
-        <div className={isAdmin ? "vitals-table-head with-actions" : "vitals-table-head"}>
+        <div className={canEditRows ? "vitals-table-head with-actions" : "vitals-table-head"}>
           <div>วันที่</div><div>เวลา</div><div>Temp.</div><div>BP</div><div>HR</div><div>RR</div><div>SpO2</div>
-          {isAdmin && <div className="print-hide"></div>}
+          {canEditRows && <div className="print-hide"></div>}
         </div>
         {historyReversed.map((v) => (
           <div key={v.id}>
-            <div className={isAdmin ? "vitals-table-row with-actions" : "vitals-table-row"} style={{ background: v.abnormal ? "oklch(96% 0.03 25)" : "transparent" }}>
+            <div className={canEditRows ? "vitals-table-row with-actions" : "vitals-table-row"} style={{ background: v.abnormal ? "oklch(96% 0.03 25)" : "transparent" }}>
               <div>{v.date}</div><div>{v.time}</div><div>{v.temp}°</div><div>{v.bp}</div><div>{v.hr}</div><div>{v.rr}</div><div>{v.spo2}%</div>
-              {isAdmin && (
+              {canEditRows && (
                 <div className="row-actions print-hide">
                   <button className="btn-link btn-link-primary" onClick={() => startRowEdit(v)}>แก้ไข</button>
                   <button className="btn-link btn-link-danger" onClick={() => removeRow(v)}>ลบ</button>
                 </div>
               )}
             </div>
-            {isAdmin && editingId === v.id && (
+            {canEditRows && editingId === v.id && (
               <div className="row-edit-panel print-hide">
                 <div><span className="field-label-sm">เวลา</span><input className="input-sm" value={editDraft.time} onChange={setE("time")} /></div>
                 <div><span className="field-label-sm">Temp</span><input className="input-sm" value={editDraft.temp} onChange={setE("temp")} /></div>

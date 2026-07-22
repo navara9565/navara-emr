@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
       login,
       logout,
       canWrite: !!caps.general,       // ข้อมูลทั่วไป/ประวัติ/ยา/Nurse Note/จำหน่าย/นัด/เตียง
+      canEditName: !!caps.editName,   // แก้ไขชื่อ-นามสกุลผู้ป่วย (ผู้จัดการ/แอดมิน)
       canVitals: !!caps.vitals,       // Vital Signs (รวมสแกน QR ปลายเตียง)
       canPtNote: !!caps.ptNote,       // PT/OT Note
       canAssess: !!caps.assess,       // แบบประเมิน ADL / Fall

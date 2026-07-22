@@ -2,15 +2,22 @@ import { useState } from "react";
 import { usePatients } from "../../state/PatientsContext";
 import { useAuth } from "../../state/AuthContext";
 import SignerSelect from "../SignerSelect";
-import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS } from "../../data/constants";
+import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS } from "../../data/constants";
 
 const EMPTY_MED = {
   name: "", dose: "",
+  strength: "", strengthUnit: "mg", form: "เม็ด",
   route: "รับประทาน",
   timing: "หลังอาหาร", meals: [], mealsOther: "",
   perDay: "2", sides: [],
   reason: "", signer: "",
 };
+
+// "500 mg · เม็ด" — the strength + form line shown on each medication.
+function strengthText(m) {
+  const s = m.strength ? `${m.strength} ${m.strengthUnit || "mg"}` : "";
+  return [s, m.form].filter(Boolean).join(" · ");
+}
 
 // Compose the stored freq string from the structured inputs.
 function composeFreq(d) {
@@ -76,6 +83,9 @@ export default function MedicationsTab({ patient, readOnly }) {
     if (!medDraft.name) return;
     addMedication(patient.id, {
       name: medDraft.name,
+      strength: medDraft.strength,
+      strengthUnit: medDraft.strengthUnit,
+      form: medDraft.form,
       dose: medDraft.dose,
       route: medDraft.route,
       freq: composeFreq(medDraft),
@@ -124,11 +134,26 @@ export default function MedicationsTab({ patient, readOnly }) {
           <div className="print-hide med-add-form">
             <div className="form-grid-2" style={{ marginTop: 18 }}>
               <div>
-                <span className="field-label">ชื่อยา (ขนาด)</span>
-                <input className="input" placeholder="เช่น Lasix (40)" value={medDraft.name} onChange={setMed("name")} />
+                <span className="field-label">ชื่อยา</span>
+                <input className="input" placeholder="เช่น Lasix, Paracetamol" value={medDraft.name} onChange={setMed("name")} />
               </div>
               <div>
-                <span className="field-label">ขนาด/ปริมาณ</span>
+                <span className="field-label">ขนาดยา</span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input className="input" style={{ flex: 1 }} inputMode="decimal" placeholder="เช่น 500" value={medDraft.strength} onChange={setMed("strength")} />
+                  <select className="input" style={{ width: 90 }} value={medDraft.strengthUnit} onChange={setMed("strengthUnit")}>
+                    {DOSE_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <span className="field-label">ชนิดยา</span>
+                <select className="input" value={medDraft.form} onChange={setMed("form")}>
+                  {MED_FORMS.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="field-label">ปริมาณต่อครั้ง</span>
                 <input className="input" placeholder="เช่น 1x1, 1 เม็ด, 2 หยด" value={medDraft.dose} onChange={setMed("dose")} />
               </div>
             </div>
@@ -228,6 +253,7 @@ export default function MedicationsTab({ patient, readOnly }) {
             <div key={m.id} className="med-item">
               <div className="med-item-row">
                 <div className="med-item-name">{m.name}</div>
+                {strengthText(m) && <div className="med-item-sub">{strengthText(m)}</div>}
                 <div className="med-item-sub">{m.dose}</div>
                 <div className="med-item-sub">{m.route}</div>
                 <div className="med-item-sub">{m.freq}</div>

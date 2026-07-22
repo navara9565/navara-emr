@@ -103,6 +103,14 @@ function guardArchivedDemo(patient) {
   }
 }
 
+// Saved notes: admin edits any kind; nurse notes also editable with general cap.
+function mayEditNoteDemo(kind) {
+  const caps = me()?.caps || {};
+  if (caps.admin) return true;
+  if (kind === "nurse" && caps.general) return true;
+  return false;
+}
+
 // Recompute lastVital/isAlert on the doc from the newest remaining row.
 function refreshLastVitalDemo(patientId) {
   const rows = load(V_KEY, []).filter((v) => v.patientId === patientId).sort((a, b) => (a.ts < b.ts ? -1 : 1));
@@ -154,7 +162,11 @@ export const demoApi = {
 
   async applyAction(id, _action, patient) {
     const list = loadPatients();
-    guardArchivedDemo(list.find((p) => p.id === id));
+    const existing = list.find((p) => p.id === id);
+    guardArchivedDemo(existing);
+    if (existing && patient.name !== existing.name && !me()?.caps?.editName) {
+      throw new Error("แก้ไขชื่อผู้ป่วยได้เฉพาะผู้จัดการหรือผู้ดูแลระบบ");
+    }
     save(P_KEY, list.map((p) => (p.id === id ? patient : p)));
     notify();
     return { ok: true };
@@ -239,7 +251,7 @@ export const demoApi = {
   },
 
   async updateVital(id, vid, f) {
-    if (me()?.role !== "admin") throw new Error("แก้ไขได้เฉพาะผู้ดูแลระบบ");
+    if (!me()?.caps?.general) throw new Error("ไม่มีสิทธิ์แก้ไขสัญญาณชีพ");
     let updated = null;
     const rows = load(V_KEY, []).map((v) => {
       if (v.id !== vid) return v;
@@ -262,7 +274,7 @@ export const demoApi = {
   },
 
   async deleteVital(id, vid) {
-    if (me()?.role !== "admin") throw new Error("ลบได้เฉพาะผู้ดูแลระบบ");
+    if (!me()?.caps?.general) throw new Error("ไม่มีสิทธิ์ลบสัญญาณชีพ");
     save(V_KEY, load(V_KEY, []).filter((v) => v.id !== vid));
     refreshLastVitalDemo(id);
     notify();
@@ -300,7 +312,8 @@ export const demoApi = {
   },
 
   async updateNote(id, nid, author, payload) {
-    if (me()?.role !== "admin") throw new Error("แก้ไขได้เฉพาะผู้ดูแลระบบ");
+    const existing = load(N_KEY, []).find((n) => n.id === nid);
+    if (!mayEditNoteDemo(existing?.kind)) throw new Error("ไม่มีสิทธิ์แก้ไขบันทึกนี้");
     let updated = null;
     const rows = load(N_KEY, []).map((n) => {
       if (n.id !== nid) return n;
@@ -315,7 +328,8 @@ export const demoApi = {
   },
 
   async deleteNote(id, nid) {
-    if (me()?.role !== "admin") throw new Error("ลบได้เฉพาะผู้ดูแลระบบ");
+    const existing = load(N_KEY, []).find((n) => n.id === nid);
+    if (!mayEditNoteDemo(existing?.kind)) throw new Error("ไม่มีสิทธิ์ลบบันทึกนี้");
     save(N_KEY, load(N_KEY, []).filter((n) => n.id !== nid));
     notify();
     return { ok: true };

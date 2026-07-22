@@ -8,6 +8,7 @@
 // The capabilities a role can grant. Each maps to what the holder may WRITE.
 export const CAPABILITIES = [
   { key: "general", label: "ข้อมูลทั่วไป / ประวัติ / ยา / Nurse Note / จำหน่าย / นัด / เตียง" },
+  { key: "editName", label: "แก้ไขชื่อ-นามสกุลผู้ป่วย (สำหรับผู้จัดการ)" },
   { key: "vitals", label: "Vital Signs (รวมสแกน QR ปลายเตียง)" },
   { key: "doctorNote", label: "Doctor Note" },
   { key: "ptNote", label: "PT/OT Note" },
@@ -18,6 +19,7 @@ export const CAPABILITIES = [
 // Built-in roles (cannot be edited or deleted).
 export const BUILTIN_ROLES = [
   { slug: "admin", label: "ผู้ดูแลระบบ", builtin: true, caps: { admin: true } },
+  { slug: "manager", label: "ผู้จัดการ", builtin: true, caps: { general: true, editName: true, vitals: true, assess: true } },
   { slug: "doctor", label: "แพทย์", builtin: true, caps: { general: true, vitals: true, doctorNote: true, ptNote: true, assess: true } },
   { slug: "nurse", label: "พยาบาล", builtin: true, caps: { general: true, vitals: true, ptNote: true, assess: true } },
   { slug: "pt", label: "นักกายภาพบำบัด", builtin: true, caps: { vitals: true, ptNote: true, assess: true } },
@@ -29,10 +31,11 @@ export const BUILTIN_ROLES = [
 // Normalize a caps object; the admin capability implies every other capability.
 export function resolveCaps(caps) {
   if (caps?.admin) {
-    return { general: true, vitals: true, doctorNote: true, ptNote: true, assess: true, admin: true };
+    return { general: true, editName: true, vitals: true, doctorNote: true, ptNote: true, assess: true, admin: true };
   }
   return {
     general: !!caps?.general,
+    editName: !!caps?.editName,
     vitals: !!caps?.vitals,
     doctorNote: !!caps?.doctorNote,
     ptNote: !!caps?.ptNote,

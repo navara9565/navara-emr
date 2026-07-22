@@ -17,6 +17,10 @@ export const PT_SIGNERS = ["อภิรดี กรวยสุวรรณ", 
 export const MED_ROUTES = ["รับประทาน", "ยาทา", "ยาหยอดตา"];
 export const ORAL_TIMINGS = ["ก่อนอาหาร", "หลังอาหาร", "พร้อมอาหาร"];
 export const ORAL_MEALS = ["เช้า", "กลางวัน", "เย็น", "ก่อนนอน"];
+// ขนาดยา (หน่วยความแรง) — ค่าเริ่มต้น mg
+export const DOSE_UNITS = ["mg", "g"];
+// ชนิดยา (รูปแบบ) — ค่าเริ่มต้น เม็ด
+export const MED_FORMS = ["เม็ด", "แคปซูล", "ซีซี"];
 
 export const DEPARTMENTS = [
   "อายุรกรรมทั่วไป",

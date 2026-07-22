@@ -81,8 +81,12 @@ export function PatientsProvider({ children }) {
       saveCover: (id, d) =>
         mutate(id, "saveCover", (p) => ({
           ...p,
+          // ชื่อจะเปลี่ยนก็ต่อเมื่อผู้ใช้มีสิทธิ์ (ส่ง d.name มาเฉพาะตอนนั้น) — ฝั่งเซิร์ฟเวอร์ตรวจซ้ำ
+          name: d.name != null && d.name.trim() ? d.name.trim() : p.name,
+          initial: d.name != null && d.name.trim() ? d.name.trim()[0] : p.initial,
           age: d.age === undefined || d.age === "" ? p.age : parseInt(d.age, 10) || 0,
           gender: d.gender || p.gender,
+          admitDate: d.admitDate != null && d.admitDate.trim() ? d.admitDate.trim() : p.admitDate,
           idNumber: d.idNumber,
           address: d.address,
           diagnosis: d.diagnosis,
@@ -108,12 +112,13 @@ export function PatientsProvider({ children }) {
 
       addMedication: (id, draft) => {
         if (!draft.name) return;
-        const usage = [draft.dose, draft.route, draft.freq].filter(Boolean).join(" · ");
+        const strengthStr = draft.strength ? `${draft.strength} ${draft.strengthUnit || "mg"}` : "";
+        const usage = [strengthStr, draft.form, draft.dose, draft.route, draft.freq].filter(Boolean).join(" · ");
         mutate(id, "addMedication", (p) => ({
           ...p,
           medications: [
             ...p.medications,
-            { id: "m" + Date.now(), name: draft.name, dose: draft.dose, route: draft.route, freq: draft.freq, prescriber: "แพทย์เจ้าของไข้" },
+            { id: "m" + Date.now(), name: draft.name, strength: draft.strength, strengthUnit: draft.strengthUnit, form: draft.form, dose: draft.dose, route: draft.route, freq: draft.freq, prescriber: "แพทย์เจ้าของไข้" },
           ],
           medChangeLog: [
             { date: today(), changeType: "เพิ่มยาใหม่", drugName: draft.name, usage, reason: draft.reason || "-", signer: draft.signer || "-" },

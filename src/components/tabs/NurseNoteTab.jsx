@@ -17,7 +17,10 @@ function legacyText(n) {
 const noteText = (n) => (n.text != null ? n.text : legacyText(n));
 
 export default function NurseNoteTab({ patient, readOnly }) {
-  const { user, isAdmin } = useAuth();
+  const { user, canWrite } = useAuth();
+  // Nurse notes can be corrected by anyone who can write them (nurse/doctor/admin),
+  // not admins only — except on discharged records (readOnly).
+  const canEdit = !readOnly && canWrite;
   const { notes, hasMore, total, loading, loadMore, addNote, updateNote, deleteNote } = useNotes(patient.id, "nurse");
   const [text, setText] = useState("");
   const [author, setAuthor] = useState(user?.name || "");
@@ -76,7 +79,7 @@ export default function NurseNoteTab({ patient, readOnly }) {
               <span>{n.author}</span>
               <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 {n.date}
-                {isAdmin && (
+                {canEdit && (
                   <span className="note-admin-actions print-hide">
                     <button className="btn-link btn-link-primary" onClick={() => startEdit(n)}>แก้ไข</button>
                     <button className="btn-link btn-link-danger" onClick={() => remove(n)}>ลบ</button>
