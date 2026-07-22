@@ -7,7 +7,7 @@ import MoveBedModal from "../components/MoveBedModal";
 import UserBar from "../components/UserBar";
 import AppointmentCalendar from "../components/AppointmentCalendar";
 import { TreeMark } from "../components/Logo";
-import { FLOORS, roomName, bedId, bedShort, bedLabel, buildOccupancy, totalBeds } from "../data/beds";
+import { FLOORS, roomName, bedId, bedShort, bedLabel, buildOccupancy, totalBeds, compareBeds } from "../data/beds";
 
 export default function PatientListPage() {
   const { patients, bedCounts, addBed, removeBed, loading, error, wsStatus } = usePatients();
@@ -34,7 +34,10 @@ export default function PatientListPage() {
 
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return activePatients.filter((p) => matches(p, q) && (!showAlertOnly || p.isAlert));
+    // เรียงตามชั้น → ห้อง → เตียง
+    return activePatients
+      .filter((p) => matches(p, q) && (!showAlertOnly || p.isAlert))
+      .sort((a, b) => compareBeds(a.bed, b.bed));
   }, [activePatients, search, showAlertOnly]);
 
   const filteredArchive = useMemo(() => {

@@ -55,6 +55,19 @@ export function roomName(roomId) {
   return roomId;
 }
 
+// Physical order of rooms (floor → room, following FLOORS).
+const ROOM_ORDER = Object.fromEntries(ALL_ROOMS.map((r, i) => [r.id, i]));
+
+// Compare two bed ids by floor, then room, then bed number.
+export function compareBeds(a, b) {
+  const pa = parseBed(a);
+  const pb = parseBed(b);
+  const ra = ROOM_ORDER[pa.roomId] ?? 9999;
+  const rb = ROOM_ORDER[pb.roomId] ?? 9999;
+  if (ra !== rb) return ra - rb;
+  return (pa.num || 0) - (pb.num || 0);
+}
+
 export function bedId(roomId, n) {
   return roomId + "-" + n;
 }

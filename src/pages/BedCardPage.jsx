@@ -29,7 +29,6 @@ export default function BedCardPage() {
         </div>
 
         <div className="bedcard-name">{patient.name}</div>
-        <div className="bedcard-sub">{patient.age} ปี · {patient.gender} · {patient.diagnosis}</div>
 
         <div className="bedcard-qr">
           <QRCodeSVG value={scanBedUrl(patient.bed)} size={240} level="M" marginSize={2} />
