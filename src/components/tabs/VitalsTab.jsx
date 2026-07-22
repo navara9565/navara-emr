@@ -3,6 +3,7 @@ import { usePatients } from "../../state/PatientsContext";
 import { useAuth } from "../../state/AuthContext";
 import { useVitals, useVitalsSummary } from "../../hooks/useVitals";
 import { isAbnormal, monthLabel } from "../../utils/format";
+import { VITAL_ROUNDS, suggestRound } from "../../utils/qr";
 import BedsideQR from "../BedsideQR";
 
 const EMPTY_FORM = { temp: "", sys: "", dia: "", hr: "", rr: "", spo2: "" };
@@ -21,6 +22,7 @@ export default function VitalsTab({ patient, readOnly }) {
   // (เวชระเบียนกลางที่จำหน่ายแล้ว readOnly=true สำหรับทุกคนยกเว้นแอดมิน)
   const canEditRows = canWrite && !readOnly;
   const [form, setForm] = useState(EMPTY_FORM);
+  const [time, setTime] = useState(suggestRound());
   const [days, setDays] = useState(7);
   const [showSummary, setShowSummary] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -48,8 +50,9 @@ export default function VitalsTab({ patient, readOnly }) {
 
   const submit = async () => {
     if (!form.temp && !form.sys) return;
-    await addVital(patient.id, form);
+    await addVital(patient.id, { ...form, time });
     setForm(EMPTY_FORM);
+    setTime(suggestRound());
   };
 
   const historyReversed = useMemo(
@@ -69,6 +72,22 @@ export default function VitalsTab({ patient, readOnly }) {
       {!readOnly && (
       <div className="card print-hide">
         <div className="section-title">บันทึกสัญญาณชีพใหม่</div>
+        <div style={{ marginBottom: 14 }}>
+          <span className="field-label">รอบเวลาที่วัด</span>
+          <div className="round-chips">
+            {VITAL_ROUNDS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={time === r ? "round-chip active" : "round-chip"}
+                onClick={() => setTime(r)}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <input className="input" style={{ marginTop: 8, maxWidth: 200 }} value={time} onChange={(e) => setTime(e.target.value)} placeholder="เช่น 10:00" />
+        </div>
         <div className="form-grid-3">
           <div>
             <span className="field-label">Temp. (°C)</span>

@@ -16,7 +16,8 @@ export default function AllBedCardsPage() {
   if (loading) return <div className="app-loading">กำลังโหลดข้อมูล...</div>;
 
   const occupancy = buildOccupancy(patients);
-  const beds = listBeds(bedCounts);
+  // เฉพาะเตียงที่มีผู้ป่วย (ไม่แสดงเตียงว่าง)
+  const beds = listBeds(bedCounts).filter((b) => occupancy[b.id]);
   const byFloor = FLOORS.map((floor) => ({
     floor,
     beds: beds.filter((b) => b.floorId === floor.id),
@@ -26,13 +27,14 @@ export default function AllBedCardsPage() {
     <div className="allcards-page">
       <div className="bedcard-toolbar print-hide">
         <button className="btn btn-outline" onClick={() => navigate("/")}>← กลับ</button>
-        <button className="btn-primary" onClick={() => window.print()}>🖨️ พิมพ์ QR ทุกเตียง ({beds.length} ใบ)</button>
+        <button className="btn-primary" onClick={() => window.print()}>🖨️ พิมพ์ QR ({beds.length} ใบ)</button>
       </div>
 
       <p className="allcards-hint print-hide">
-        พิมพ์แล้วตัดตามเส้นประ แปะที่ปลายเตียงแต่ละเตียง — QR ผูกกับ "เตียง" (สแกนแล้วขึ้นชื่อผู้ป่วยปัจจุบันให้ตรวจสอบก่อนบันทึก)
-        ส่วนชื่อบนการ์ดเป็นผู้ป่วยปัจจุบัน หากมีการเปลี่ยนผู้ป่วยให้พิมพ์ใหม่เฉพาะเตียงนั้น
+        แสดงเฉพาะเตียงที่มีผู้ป่วย — พิมพ์แล้วตัดตามเส้นประ แปะที่ปลายเตียง · สแกนแล้วขึ้นชื่อผู้ป่วยให้ตรวจสอบก่อนบันทึก
+        · หากเปลี่ยนผู้ป่วยให้พิมพ์การ์ดใบนั้นใหม่
       </p>
+      {beds.length === 0 && <div className="empty-hint">ยังไม่มีผู้ป่วยในความดูแล</div>}
 
       {byFloor.map(({ floor, beds: floorBeds }) => (
         <div key={floor.id} className="allcards-floor">
