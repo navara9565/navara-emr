@@ -190,7 +190,7 @@ export default function VitalsTab({ patient, readOnly }) {
         )}
         <div className="vitals-scroll">
         <div className={canEditRows ? "vitals-table-head with-actions" : "vitals-table-head"}>
-          <div>วันที่</div><div>เวลา</div><div>Temp.</div><div>BP</div><div>HR</div><div>RR</div><div>SpO2</div><div>น้ำดื่ม</div><div>ปัสสาวะ</div><div>อุจจาระ</div>
+          <div>วันที่</div><div>เวลา</div><div>Temp.</div><div>BP</div><div>HR</div><div>RR</div><div>SpO2</div><div>น้ำดื่ม(มล.)</div><div>ปัสสาวะ(ครั้ง)</div><div>อุจจาระ(ครั้ง)</div>
           {canEditRows && <div className="print-hide"></div>}
         </div>
         {historyReversed.map((v) => (
