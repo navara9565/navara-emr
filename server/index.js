@@ -34,6 +34,13 @@ function tokenFrom(req) {
   return h.startsWith("Bearer ") ? h.slice(7) : null;
 }
 
+// Optional integer field: empty/blank → null (not recorded), else parsed int.
+function optInt(v) {
+  if (v === undefined || v === null || String(v).trim() === "") return null;
+  const n = parseInt(v, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 // Attach the session user plus its resolved capability set.
 function withCaps(user) {
   return { ...user, caps: db.getRoleCaps(user.role), roleLabel: db.getRoleLabel(user.role) };
@@ -209,6 +216,7 @@ app.post("/api/patients/:id/vitals", requireAuth, requireCap("vitals"), (req, re
     temp: temp.toFixed(1),
     sys, dia, hr, rr, spo2,
     recordedBy: f.recordedBy || req.user.name,
+    intake: optInt(f.intake), urine: optInt(f.urine), stool: optInt(f.stool),
   });
 
   const updated = {
@@ -253,6 +261,9 @@ app.put("/api/patients/:id/vitals/:vid", requireAuth, requireCap("general"), (re
     hr: parseInt(f.hr, 10) || existing.hr,
     rr: parseInt(f.rr, 10) || existing.rr,
     spo2: parseInt(f.spo2, 10) || existing.spo2,
+    intake: f.intake !== undefined ? optInt(f.intake) : existing.intake ?? null,
+    urine: f.urine !== undefined ? optInt(f.urine) : existing.urine ?? null,
+    stool: f.stool !== undefined ? optInt(f.stool) : existing.stool ?? null,
   });
   refreshLastVital(patient, req.user.username);
   broadcast({ type: "vital-updated", patientId: patient.id, vital, by: req.user.username });

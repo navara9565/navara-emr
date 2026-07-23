@@ -7,7 +7,7 @@ import { isAbnormal } from "../utils/format";
 import { VITAL_ROUNDS, suggestRound } from "../utils/qr";
 import SignerSelect from "../components/SignerSelect";
 
-const EMPTY = { temp: "", sys: "", dia: "", hr: "", rr: "", spo2: "" };
+const EMPTY = { temp: "", sys: "", dia: "", hr: "", rr: "", spo2: "", intake: "", urine: "", stool: "" };
 
 // Bedside "scan → log vitals" form, shared by the patient-keyed (/scan/:id)
 // and bed-keyed (/scan-bed/:bedId) entry points.
@@ -104,6 +104,9 @@ export default function BedsideVitalsForm({ patient }) {
           <div><span className="field-label">BP ล่าง</span><input className="input scan-input" inputMode="numeric" value={form.dia} onChange={set("dia")} placeholder="80" /></div>
           <div><span className="field-label">HR (/min)</span><input className="input scan-input" inputMode="numeric" value={form.hr} onChange={set("hr")} placeholder="76" /></div>
           <div><span className="field-label">RR (/min)</span><input className="input scan-input" inputMode="numeric" value={form.rr} onChange={set("rr")} placeholder="18" /></div>
+          <div><span className="field-label">น้ำเวร (มล.)</span><input className="input scan-input" inputMode="numeric" value={form.intake} onChange={set("intake")} placeholder="600" /></div>
+          <div><span className="field-label">ปัสสาวะ (มล.)</span><input className="input scan-input" inputMode="numeric" value={form.urine} onChange={set("urine")} placeholder="800" /></div>
+          <div><span className="field-label">อุจจาระ (ครั้ง)</span><input className="input scan-input" inputMode="numeric" value={form.stool} onChange={set("stool")} placeholder="1" /></div>
         </div>
 
         <div className="scan-field">

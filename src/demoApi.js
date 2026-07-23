@@ -32,6 +32,13 @@ function load(key, fallback) {
   return fallback;
 }
 
+// Optional integer: blank → null (not recorded).
+function demoInt(v) {
+  if (v === undefined || v === null || String(v).trim() === "") return null;
+  const n = parseInt(v, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 function save(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -239,6 +246,7 @@ export const demoApi = {
       temp: temp.toFixed(1),
       sys, dia, hr, rr, spo2,
       recordedBy: f.recordedBy || me()?.name || "พยาบาล",
+      intake: demoInt(f.intake), urine: demoInt(f.urine), stool: demoInt(f.stool),
     };
     save(V_KEY, [...load(V_KEY, []), vital]);
     save(P_KEY, list.map((p) =>
@@ -264,6 +272,9 @@ export const demoApi = {
         hr: parseInt(f.hr, 10) || v.hr,
         rr: parseInt(f.rr, 10) || v.rr,
         spo2: parseInt(f.spo2, 10) || v.spo2,
+        intake: f.intake !== undefined ? demoInt(f.intake) : v.intake ?? null,
+        urine: f.urine !== undefined ? demoInt(f.urine) : v.urine ?? null,
+        stool: f.stool !== undefined ? demoInt(f.stool) : v.stool ?? null,
       };
       return updated;
     });
