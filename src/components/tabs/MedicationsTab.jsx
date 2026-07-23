@@ -6,7 +6,7 @@ import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS, INHALE_SCH
 
 const EMPTY_MED = {
   name: "", dose: "",
-  strength: "", strengthUnit: "mg", form: "เม็ด",
+  strength: "", strengthUnit: "mg", strengthUnitOther: "", form: "เม็ด",
   route: "รับประทาน",
   timing: "หลังอาหาร", meals: [], mealsOther: "",
   prn: false, prnHours: "",
@@ -30,7 +30,7 @@ function strengthText(m) {
 function composeFreq(d) {
   if (d.route === "รับประทาน") {
     const meals = [...ORAL_MEALS.filter((m) => d.meals.includes(m)), d.mealsOther.trim()].filter(Boolean);
-    const base = [d.timing, meals.join("-")].filter(Boolean).join(" ");
+    const base = [d.timing, ...meals].filter(Boolean).join(" ");
     return [base, d.prn ? prnText(d) : ""].filter(Boolean).join(" · ");
   }
   if (d.route === "ยาพ่น") {
@@ -94,10 +94,12 @@ export default function MedicationsTab({ patient, readOnly }) {
     setMedDraft((d) => ({ ...d, [key]: d[key].includes(item) ? d[key].filter((x) => x !== item) : [...d[key], item] }));
   const submitAdd = () => {
     if (!medDraft.name) return;
+    // "อื่นๆ" → ใช้หน่วยที่พิมพ์เอง
+    const unit = medDraft.strengthUnit === "อื่นๆ" ? (medDraft.strengthUnitOther.trim() || "unit") : medDraft.strengthUnit;
     addMedication(patient.id, {
       name: medDraft.name,
       strength: medDraft.strength,
-      strengthUnit: medDraft.strengthUnit,
+      strengthUnit: unit,
       form: medDraft.form,
       dose: medDraft.dose,
       route: medDraft.route,
@@ -154,10 +156,13 @@ export default function MedicationsTab({ patient, readOnly }) {
                 <span className="field-label">ขนาดยา</span>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input className="input" style={{ flex: 1 }} inputMode="decimal" placeholder="เช่น 500" value={medDraft.strength} onChange={setMed("strength")} />
-                  <select className="input" style={{ width: 90 }} value={medDraft.strengthUnit} onChange={setMed("strengthUnit")}>
+                  <select className="input" style={{ width: 100 }} value={medDraft.strengthUnit} onChange={setMed("strengthUnit")}>
                     {DOSE_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
+                {medDraft.strengthUnit === "อื่นๆ" && (
+                  <input className="input" style={{ marginTop: 8 }} placeholder="ระบุหน่วย เช่น mcg, IU, ml, %" value={medDraft.strengthUnitOther} onChange={setMed("strengthUnitOther")} />
+                )}
               </div>
               <div>
                 <span className="field-label">ชนิดยา</span>
@@ -311,16 +316,17 @@ export default function MedicationsTab({ patient, readOnly }) {
           {patient.medications.map((m) => (
             <div key={m.id} className="med-item">
               <div className="med-item-row">
-                <div className="med-item-name">{m.name}</div>
-                {strengthText(m) && <div className="med-item-sub">{strengthText(m)}</div>}
-                <div className="med-item-sub">{m.dose}</div>
-                <div className="med-item-sub">{m.route}</div>
-                <div className="med-item-sub">{m.freq}</div>
+                <div className="med-item-line">
+                  <span className="med-item-name">{m.name}</span>
+                  <span className="med-item-detail">
+                    {[strengthText(m), m.route, m.dose, m.freq].filter(Boolean).join(" · ")}
+                  </span>
+                </div>
                 {!readOnly && (
-                  <>
-                    <button className="btn-link btn-link-primary print-hide" onClick={() => startEdit(m)}>แก้ไข</button>
-                    <button className="btn-link btn-link-danger print-hide" onClick={() => startRemove(m.id)}>ลบ</button>
-                  </>
+                  <div className="med-item-actions print-hide">
+                    <button className="btn-link btn-link-primary" onClick={() => startEdit(m)}>แก้ไข</button>
+                    <button className="btn-link btn-link-danger" onClick={() => startRemove(m.id)}>ลบ</button>
+                  </div>
                 )}
               </div>
 

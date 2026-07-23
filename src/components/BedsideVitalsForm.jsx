@@ -105,7 +105,7 @@ export default function BedsideVitalsForm({ patient }) {
           <div><span className="field-label">HR (/min)</span><input className="input scan-input" inputMode="numeric" value={form.hr} onChange={set("hr")} placeholder="76" /></div>
           <div><span className="field-label">RR (/min)</span><input className="input scan-input" inputMode="numeric" value={form.rr} onChange={set("rr")} placeholder="18" /></div>
           <div><span className="field-label">น้ำดื่ม (มล.)</span><input className="input scan-input" inputMode="numeric" value={form.intake} onChange={set("intake")} placeholder="600" /></div>
-          <div><span className="field-label">ปัสสาวะ (มล.)</span><input className="input scan-input" inputMode="numeric" value={form.urine} onChange={set("urine")} placeholder="800" /></div>
+          <div><span className="field-label">ปัสสาวะ (ครั้ง)</span><input className="input scan-input" inputMode="numeric" value={form.urine} onChange={set("urine")} placeholder="3" /></div>
           <div><span className="field-label">อุจจาระ (ครั้ง)</span><input className="input scan-input" inputMode="numeric" value={form.stool} onChange={set("stool")} placeholder="1" /></div>
         </div>
 

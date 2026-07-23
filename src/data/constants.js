@@ -19,8 +19,8 @@ export const ORAL_TIMINGS = ["ก่อนอาหาร", "หลังอา�
 export const ORAL_MEALS = ["เช้า", "กลางวัน", "เย็น", "ก่อนนอน"];
 // ตารางพ่นยา (ยาพ่น)
 export const INHALE_SCHEDULES = ["เช้า", "เช้าเย็น", "เมื่อมีอาการ"];
-// ขนาดยา (หน่วยความแรง) — ค่าเริ่มต้น mg
-export const DOSE_UNITS = ["mg", "g"];
+// ขนาดยา (หน่วยความแรง) — ค่าเริ่มต้น mg · "อื่นๆ" = พิมพ์หน่วยเอง
+export const DOSE_UNITS = ["mg", "g", "unit", "อื่นๆ"];
 // ชนิดยา (รูปแบบ) — ค่าเริ่มต้น เม็ด
 export const MED_FORMS = ["เม็ด", "แคปซูล", "ซีซี"];
 

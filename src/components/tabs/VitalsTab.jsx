@@ -121,8 +121,8 @@ export default function VitalsTab({ patient, readOnly }) {
             <input className="input" inputMode="numeric" placeholder="เช่น 600" value={form.intake} onChange={set("intake")} />
           </div>
           <div>
-            <span className="field-label">ปริมาณปัสสาวะ (มล.)</span>
-            <input className="input" inputMode="numeric" placeholder="เช่น 800" value={form.urine} onChange={set("urine")} />
+            <span className="field-label">จำนวนปัสสาวะ (ครั้ง)</span>
+            <input className="input" inputMode="numeric" placeholder="เช่น 3" value={form.urine} onChange={set("urine")} />
           </div>
           <div>
             <span className="field-label">จำนวนอุจจาระ (ครั้ง)</span>
@@ -215,7 +215,7 @@ export default function VitalsTab({ patient, readOnly }) {
                 <div><span className="field-label-sm">RR</span><input className="input-sm" value={editDraft.rr} onChange={setE("rr")} /></div>
                 <div><span className="field-label-sm">SpO2</span><input className="input-sm" value={editDraft.spo2} onChange={setE("spo2")} /></div>
                 <div><span className="field-label-sm">น้ำดื่ม (มล.)</span><input className="input-sm" value={editDraft.intake} onChange={setE("intake")} /></div>
-                <div><span className="field-label-sm">ปัสสาวะ (มล.)</span><input className="input-sm" value={editDraft.urine} onChange={setE("urine")} /></div>
+                <div><span className="field-label-sm">ปัสสาวะ (ครั้ง)</span><input className="input-sm" value={editDraft.urine} onChange={setE("urine")} /></div>
                 <div><span className="field-label-sm">อุจจาระ (ครั้ง)</span><input className="input-sm" value={editDraft.stool} onChange={setE("stool")} /></div>
                 <div style={{ gridColumn: "1 / -1" }}><span className="field-label-sm">อื่นๆ</span><input className="input-sm" value={editDraft.other} onChange={setE("other")} /></div>
                 <div style={{ display: "flex", gap: 6, alignItems: "end" }}>
