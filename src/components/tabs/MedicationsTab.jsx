@@ -2,16 +2,23 @@ import { useState } from "react";
 import { usePatients } from "../../state/PatientsContext";
 import { useAuth } from "../../state/AuthContext";
 import SignerSelect from "../SignerSelect";
-import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS } from "../../data/constants";
+import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS, INHALE_SCHEDULES } from "../../data/constants";
 
 const EMPTY_MED = {
   name: "", dose: "",
   strength: "", strengthUnit: "mg", form: "เม็ด",
   route: "รับประทาน",
   timing: "หลังอาหาร", meals: [], mealsOther: "",
+  prn: false, prnHours: "",
   perDay: "2", sides: [],
+  puff: "", inhaleSchedule: "เช้า",
   reason: "", signer: "",
 };
+
+// "เมื่อมีอาการ ทุก X ชม." (PRN)
+function prnText(d) {
+  return "เมื่อมีอาการ" + (String(d.prnHours).trim() ? ` ทุก ${String(d.prnHours).trim()} ชม.` : "");
+}
 
 // "500 mg · เม็ด" — the strength + form line shown on each medication.
 function strengthText(m) {
@@ -23,7 +30,13 @@ function strengthText(m) {
 function composeFreq(d) {
   if (d.route === "รับประทาน") {
     const meals = [...ORAL_MEALS.filter((m) => d.meals.includes(m)), d.mealsOther.trim()].filter(Boolean);
-    return [d.timing, meals.join("-")].filter(Boolean).join(" ");
+    const base = [d.timing, meals.join("-")].filter(Boolean).join(" ");
+    return [base, d.prn ? prnText(d) : ""].filter(Boolean).join(" · ");
+  }
+  if (d.route === "ยาพ่น") {
+    const puff = String(d.puff).trim() ? `${String(d.puff).trim()} puff` : "";
+    const sched = d.inhaleSchedule === "เมื่อมีอาการ" ? prnText(d) : d.inhaleSchedule;
+    return [puff, sched].filter(Boolean).join(" · ");
   }
   const sides = d.sides.length ? " · ข้าง" + d.sides.join("-") : "";
   return `${d.perDay} ครั้ง/วัน${sides}`;
@@ -168,7 +181,7 @@ export default function MedicationsTab({ patient, readOnly }) {
                     className={medDraft.route === r ? "choice-chip active" : "choice-chip"}
                     onClick={() => setMedDraft((d) => ({ ...d, route: r }))}
                   >
-                    {r === "รับประทาน" ? "💊" : r === "ยาทา" ? "🧴" : "💧"} {r}
+                    {r === "รับประทาน" ? "💊" : r === "ยาทา" ? "🧴" : r === "ยาหยอดตา" ? "💧" : "💨"} {r}
                   </button>
                 ))}
               </div>
@@ -209,6 +222,52 @@ export default function MedicationsTab({ patient, readOnly }) {
                     />
                   </div>
                 </div>
+                <div>
+                  <div className="choice-chips" style={{ alignItems: "center" }}>
+                    <label className={medDraft.prn ? "check-chip active" : "check-chip"}>
+                      <input type="checkbox" checked={medDraft.prn} onChange={() => setMedDraft((d) => ({ ...d, prn: !d.prn }))} />
+                      เมื่อมีอาการ (PRN)
+                    </label>
+                    {medDraft.prn && (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        ทุก
+                        <input className="input-sm" style={{ width: 70 }} inputMode="numeric" placeholder="6" value={medDraft.prnHours} onChange={setMed("prnHours")} />
+                        ชม.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : medDraft.route === "ยาพ่น" ? (
+              <>
+                <div className="form-grid-2">
+                  <div>
+                    <span className="field-label">จำนวน puff</span>
+                    <input className="input" inputMode="numeric" placeholder="เช่น 2" value={medDraft.puff} onChange={setMed("puff")} />
+                  </div>
+                  <div>
+                    <span className="field-label">เวลาที่พ่น</span>
+                    <div className="choice-chips" style={{ marginTop: 4 }}>
+                      {INHALE_SCHEDULES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className={medDraft.inhaleSchedule === s ? "choice-chip active" : "choice-chip"}
+                          onClick={() => setMedDraft((d) => ({ ...d, inhaleSchedule: s }))}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {medDraft.inhaleSchedule === "เมื่อมีอาการ" && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span className="field-label" style={{ margin: 0 }}>ทุก</span>
+                    <input className="input-sm" style={{ width: 70 }} inputMode="numeric" placeholder="6" value={medDraft.prnHours} onChange={setMed("prnHours")} />
+                    <span className="field-label" style={{ margin: 0 }}>ชม.</span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="form-grid-2">

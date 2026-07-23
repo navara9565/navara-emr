@@ -6,7 +6,7 @@ import { isAbnormal, monthLabel } from "../../utils/format";
 import { VITAL_ROUNDS, suggestRound } from "../../utils/qr";
 import BedsideQR from "../BedsideQR";
 
-const EMPTY_FORM = { temp: "", sys: "", dia: "", hr: "", rr: "", spo2: "", intake: "", urine: "", stool: "" };
+const EMPTY_FORM = { temp: "", sys: "", dia: "", hr: "", rr: "", spo2: "", intake: "", urine: "", stool: "", other: "" };
 const io = (v) => (v === null || v === undefined || v === "" ? "-" : v);
 
 const RANGES = [
@@ -34,7 +34,7 @@ export default function VitalsTab({ patient, readOnly }) {
 
   const startRowEdit = (v) => {
     setEditingId(v.id);
-    setEditDraft({ time: v.time, temp: v.temp, sys: v.sys, dia: v.dia, hr: v.hr, rr: v.rr, spo2: v.spo2, intake: v.intake ?? "", urine: v.urine ?? "", stool: v.stool ?? "" });
+    setEditDraft({ time: v.time, temp: v.temp, sys: v.sys, dia: v.dia, hr: v.hr, rr: v.rr, spo2: v.spo2, intake: v.intake ?? "", urine: v.urine ?? "", stool: v.stool ?? "", other: v.other ?? "" });
   };
   const setE = (key) => (e) => setEditDraft((d) => ({ ...d, [key]: e.target.value }));
   const saveRowEdit = async () => {
@@ -117,7 +117,7 @@ export default function VitalsTab({ patient, readOnly }) {
         </div>
         <div className="form-grid-3" style={{ marginTop: 12 }}>
           <div>
-            <span className="field-label">ปริมาณน้ำเวร (มล.)</span>
+            <span className="field-label">ปริมาณน้ำดื่ม (มล.)</span>
             <input className="input" inputMode="numeric" placeholder="เช่น 600" value={form.intake} onChange={set("intake")} />
           </div>
           <div>
@@ -128,6 +128,10 @@ export default function VitalsTab({ patient, readOnly }) {
             <span className="field-label">จำนวนอุจจาระ (ครั้ง)</span>
             <input className="input" inputMode="numeric" placeholder="เช่น 1" value={form.stool} onChange={set("stool")} />
           </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <span className="field-label">อื่นๆ</span>
+          <input className="input" placeholder="พิมพ์บันทึกเพิ่มเติมได้อิสระ" value={form.other} onChange={set("other")} />
         </div>
         <div style={{ marginTop: 14 }}>
           <button className="btn-primary" onClick={submit}>บันทึกค่า</button>
@@ -186,7 +190,7 @@ export default function VitalsTab({ patient, readOnly }) {
         )}
         <div className="vitals-scroll">
         <div className={canEditRows ? "vitals-table-head with-actions" : "vitals-table-head"}>
-          <div>วันที่</div><div>เวลา</div><div>Temp.</div><div>BP</div><div>HR</div><div>RR</div><div>SpO2</div><div>น้ำเวร</div><div>ปัสสาวะ</div><div>อุจจาระ</div>
+          <div>วันที่</div><div>เวลา</div><div>Temp.</div><div>BP</div><div>HR</div><div>RR</div><div>SpO2</div><div>น้ำดื่ม</div><div>ปัสสาวะ</div><div>อุจจาระ</div>
           {canEditRows && <div className="print-hide"></div>}
         </div>
         {historyReversed.map((v) => (
@@ -200,6 +204,7 @@ export default function VitalsTab({ patient, readOnly }) {
                 </div>
               )}
             </div>
+            {v.other && <div className="vitals-note-line">📝 {v.other}</div>}
             {canEditRows && editingId === v.id && (
               <div className="row-edit-panel print-hide">
                 <div><span className="field-label-sm">เวลา</span><input className="input-sm" value={editDraft.time} onChange={setE("time")} /></div>
@@ -209,9 +214,10 @@ export default function VitalsTab({ patient, readOnly }) {
                 <div><span className="field-label-sm">HR</span><input className="input-sm" value={editDraft.hr} onChange={setE("hr")} /></div>
                 <div><span className="field-label-sm">RR</span><input className="input-sm" value={editDraft.rr} onChange={setE("rr")} /></div>
                 <div><span className="field-label-sm">SpO2</span><input className="input-sm" value={editDraft.spo2} onChange={setE("spo2")} /></div>
-                <div><span className="field-label-sm">น้ำเวร (มล.)</span><input className="input-sm" value={editDraft.intake} onChange={setE("intake")} /></div>
+                <div><span className="field-label-sm">น้ำดื่ม (มล.)</span><input className="input-sm" value={editDraft.intake} onChange={setE("intake")} /></div>
                 <div><span className="field-label-sm">ปัสสาวะ (มล.)</span><input className="input-sm" value={editDraft.urine} onChange={setE("urine")} /></div>
                 <div><span className="field-label-sm">อุจจาระ (ครั้ง)</span><input className="input-sm" value={editDraft.stool} onChange={setE("stool")} /></div>
+                <div style={{ gridColumn: "1 / -1" }}><span className="field-label-sm">อื่นๆ</span><input className="input-sm" value={editDraft.other} onChange={setE("other")} /></div>
                 <div style={{ display: "flex", gap: 6, alignItems: "end" }}>
                   <button className="btn-secondary-sm" onClick={() => setEditingId(null)}>ยกเลิก</button>
                   <button className="btn-primary-sm" onClick={saveRowEdit}>บันทึก</button>

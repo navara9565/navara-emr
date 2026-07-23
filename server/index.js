@@ -217,6 +217,7 @@ app.post("/api/patients/:id/vitals", requireAuth, requireCap("vitals"), (req, re
     sys, dia, hr, rr, spo2,
     recordedBy: f.recordedBy || req.user.name,
     intake: optInt(f.intake), urine: optInt(f.urine), stool: optInt(f.stool),
+    other: (f.other || "").trim() || null,
   });
 
   const updated = {
@@ -264,6 +265,7 @@ app.put("/api/patients/:id/vitals/:vid", requireAuth, requireCap("general"), (re
     intake: f.intake !== undefined ? optInt(f.intake) : existing.intake ?? null,
     urine: f.urine !== undefined ? optInt(f.urine) : existing.urine ?? null,
     stool: f.stool !== undefined ? optInt(f.stool) : existing.stool ?? null,
+    other: f.other !== undefined ? ((f.other || "").trim() || null) : existing.other ?? null,
   });
   refreshLastVital(patient, req.user.username);
   broadcast({ type: "vital-updated", patientId: patient.id, vital, by: req.user.username });

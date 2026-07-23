@@ -247,6 +247,7 @@ export const demoApi = {
       sys, dia, hr, rr, spo2,
       recordedBy: f.recordedBy || me()?.name || "พยาบาล",
       intake: demoInt(f.intake), urine: demoInt(f.urine), stool: demoInt(f.stool),
+      other: (f.other || "").trim() || null,
     };
     save(V_KEY, [...load(V_KEY, []), vital]);
     save(P_KEY, list.map((p) =>
@@ -275,6 +276,7 @@ export const demoApi = {
         intake: f.intake !== undefined ? demoInt(f.intake) : v.intake ?? null,
         urine: f.urine !== undefined ? demoInt(f.urine) : v.urine ?? null,
         stool: f.stool !== undefined ? demoInt(f.stool) : v.stool ?? null,
+        other: f.other !== undefined ? ((f.other || "").trim() || null) : v.other ?? null,
       };
       return updated;
     });

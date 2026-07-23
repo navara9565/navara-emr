@@ -68,7 +68,8 @@ db.exec(`
     recorded_by TEXT NOT NULL,
     intake INTEGER,
     urine INTEGER,
-    stool INTEGER
+    stool INTEGER,
+    other TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_vitals_patient_ts ON vitals(patient_id, ts);
   CREATE TABLE IF NOT EXISTS notes (
@@ -151,16 +152,20 @@ db.exec(`
       console.log(`[db] added vitals.${col} column`);
     }
   }
+  if (!cols.includes("other")) {
+    db.exec("ALTER TABLE vitals ADD COLUMN other TEXT");
+    console.log("[db] added vitals.other column");
+  }
 }
 
 const insertVitalStmt = () =>
-  db.prepare("INSERT INTO vitals (id, patient_id, ts, date, time, temp, sys, dia, hr, rr, spo2, recorded_by, intake, urine, stool) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  db.prepare("INSERT INTO vitals (id, patient_id, ts, date, time, temp, sys, dia, hr, rr, spo2, recorded_by, intake, urine, stool, other) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 const insertNoteStmt = () =>
   db.prepare("INSERT INTO notes (id, patient_id, kind, ts, date, author, payload) VALUES (?,?,?,?,?,?,?)");
 
 function storeSplit(split) {
   const iv = insertVitalStmt();
-  for (const v of split.vitals) iv.run(v.id, v.patientId, v.ts, v.date, v.time, v.temp, v.sys, v.dia, v.hr, v.rr, v.spo2, v.recordedBy, v.intake ?? null, v.urine ?? null, v.stool ?? null);
+  for (const v of split.vitals) iv.run(v.id, v.patientId, v.ts, v.date, v.time, v.temp, v.sys, v.dia, v.hr, v.rr, v.spo2, v.recordedBy, v.intake ?? null, v.urine ?? null, v.stool ?? null, v.other ?? null);
   const inote = insertNoteStmt();
   for (const n of split.notes) inote.run(n.id, n.patientId, n.kind, n.ts, n.date, n.author, JSON.stringify(n.payload));
 }
@@ -367,7 +372,7 @@ const rowToVital = (r) => ({
   id: r.id, patientId: r.patient_id, ts: r.ts, date: r.date, time: r.time,
   temp: r.temp, sys: r.sys, dia: r.dia, hr: r.hr, rr: r.rr, spo2: r.spo2,
   recordedBy: r.recorded_by,
-  intake: r.intake, urine: r.urine, stool: r.stool,
+  intake: r.intake, urine: r.urine, stool: r.stool, other: r.other,
 });
 
 // days = 0 → all history; otherwise a rolling window. Ascending by time.
@@ -380,7 +385,7 @@ export function listVitals(patientId, days) {
 }
 
 export function addVitalRow(v) {
-  insertVitalStmt().run(v.id, v.patientId, v.ts, v.date, v.time, v.temp, v.sys, v.dia, v.hr, v.rr, v.spo2, v.recordedBy, v.intake ?? null, v.urine ?? null, v.stool ?? null);
+  insertVitalStmt().run(v.id, v.patientId, v.ts, v.date, v.time, v.temp, v.sys, v.dia, v.hr, v.rr, v.spo2, v.recordedBy, v.intake ?? null, v.urine ?? null, v.stool ?? null, v.other ?? null);
   return v;
 }
 
@@ -390,8 +395,8 @@ export function getVital(id) {
 }
 
 export function updateVitalRow(id, f) {
-  db.prepare("UPDATE vitals SET time = ?, temp = ?, sys = ?, dia = ?, hr = ?, rr = ?, spo2 = ?, intake = ?, urine = ?, stool = ? WHERE id = ?")
-    .run(f.time, f.temp, f.sys, f.dia, f.hr, f.rr, f.spo2, f.intake ?? null, f.urine ?? null, f.stool ?? null, id);
+  db.prepare("UPDATE vitals SET time = ?, temp = ?, sys = ?, dia = ?, hr = ?, rr = ?, spo2 = ?, intake = ?, urine = ?, stool = ?, other = ? WHERE id = ?")
+    .run(f.time, f.temp, f.sys, f.dia, f.hr, f.rr, f.spo2, f.intake ?? null, f.urine ?? null, f.stool ?? null, f.other ?? null, id);
   return getVital(id);
 }
 
