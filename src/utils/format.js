@@ -12,6 +12,25 @@ export function fmtDate(d) {
   return d.getDate() + " " + THAI_MONTHS[d.getMonth()] + " " + (d.getFullYear() + 543);
 }
 
+// Wall-clock date/time in Asia/Bangkok (UTC+7), independent of the server's
+// own timezone — Render runs in UTC, so stamping with local time would put
+// early-morning Thai records on the previous day. Use this on the server.
+export function bangkokStamp(d = new Date()) {
+  const b = new Date(d.getTime() + 7 * 3600 * 1000); // shift to UTC+7
+  const pad = (n) => String(n).padStart(2, "0");
+  return {
+    iso: d.toISOString(), // keep the true instant for ordering
+    date: b.getUTCDate() + " " + THAI_MONTHS[b.getUTCMonth()] + " " + (b.getUTCFullYear() + 543),
+    time: pad(b.getUTCHours()) + ":" + pad(b.getUTCMinutes()),
+  };
+}
+
+// True ISO date (YYYY-MM-DD) in Bangkok time — for grouping historical rows.
+export function bangkokISODate(d = new Date()) {
+  const b = new Date(d.getTime() + 7 * 3600 * 1000);
+  return b.toISOString().slice(0, 10);
+}
+
 export function isAbnormal(temp, sys, hr, spo2) {
   return parseFloat(temp) >= 37.6 || sys >= 150 || sys < 95 || hr >= 105 || hr < 55 || spo2 < 94;
 }

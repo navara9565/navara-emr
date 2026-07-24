@@ -20,6 +20,7 @@ import { generatePatients } from "../src/data/generatePatients.js";
 import { INITIAL_BED_COUNTS } from "../src/data/beds.js";
 import { splitLegacyDoc, isLegacyDoc } from "../src/data/splitLegacy.js";
 import { BUILTIN_ROLES, builtinRole, isBuiltinRole, resolveCaps } from "../src/data/roles.js";
+import { bangkokStamp } from "../src/utils/format.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.EMR_DATA_DIR || join(__dirname, "data");
@@ -156,6 +157,25 @@ db.exec(`
     db.exec("ALTER TABLE vitals ADD COLUMN other TEXT");
     console.log("[db] added vitals.other column");
   }
+}
+
+// One-time fix: earlier builds stamped the display date in the server's UTC
+// timezone, so early-morning Thai records landed on the previous day. Recompute
+// the `date` string of every vital/note from its true timestamp in Bangkok time.
+// Idempotent — only rows whose date is actually wrong get rewritten.
+{
+  let fixed = 0;
+  const uv = db.prepare("UPDATE vitals SET date = ? WHERE id = ?");
+  for (const r of db.prepare("SELECT id, ts, date FROM vitals").all()) {
+    const correct = bangkokStamp(new Date(r.ts)).date;
+    if (correct !== r.date) { uv.run(correct, r.id); fixed++; }
+  }
+  const un = db.prepare("UPDATE notes SET date = ? WHERE id = ?");
+  for (const r of db.prepare("SELECT id, ts, date FROM notes").all()) {
+    const correct = bangkokStamp(new Date(r.ts)).date;
+    if (correct !== r.date) { un.run(correct, r.id); fixed++; }
+  }
+  if (fixed) console.log(`[db] corrected ${fixed} record dates to Asia/Bangkok time`);
 }
 
 const insertVitalStmt = () =>

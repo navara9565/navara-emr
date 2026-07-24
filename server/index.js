@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { existsSync, rmSync } from "node:fs";
 import { WebSocketServer } from "ws";
 import * as db from "./db.js";
-import { fmtDate, isAbnormal } from "../src/utils/format.js";
+import { isAbnormal, bangkokStamp } from "../src/utils/format.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // PORT: convention used by cloud hosts (Render/Railway/Fly); EMR_PORT for local override.
@@ -200,6 +200,7 @@ app.post("/api/patients/:id/vitals", requireAuth, requireCap("vitals"), (req, re
   const f = req.body || {};
   if (!f.temp && !f.sys) return res.status(400).json({ error: "ต้องกรอกอย่างน้อย Temp หรือ BP" });
   const now = new Date();
+  const stamp = bangkokStamp(now);
   const temp = parseFloat(f.temp) || 36.5;
   const sys = parseInt(f.sys, 10) || 120;
   const dia = parseInt(f.dia, 10) || 75;
@@ -210,9 +211,9 @@ app.post("/api/patients/:id/vitals", requireAuth, requireCap("vitals"), (req, re
   const vital = db.addVitalRow({
     id: "v" + now.getTime() + Math.random().toString(36).slice(2, 6),
     patientId: patient.id,
-    ts: now.toISOString(),
-    date: fmtDate(now),
-    time: f.time || now.toTimeString().slice(0, 5),
+    ts: stamp.iso,
+    date: stamp.date,
+    time: f.time || stamp.time,
     temp: temp.toFixed(1),
     sys, dia, hr, rr, spo2,
     recordedBy: f.recordedBy || req.user.name,
@@ -304,12 +305,13 @@ app.post("/api/patients/:id/notes", requireAuth, (req, res) => {
   if (!guardArchived(patient, req.user, res)) return;
 
   const now = new Date();
+  const stamp = bangkokStamp(now);
   const note = db.addNoteRow({
     id: "n" + now.getTime() + Math.random().toString(36).slice(2, 6),
     patientId: patient.id,
     kind,
-    ts: now.toISOString(),
-    date: fmtDate(now),
+    ts: stamp.iso,
+    date: stamp.date,
     author: author || req.user.name,
     payload,
   });
