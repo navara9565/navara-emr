@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNotes } from "../../hooks/useNotes";
 import { useAuth } from "../../state/AuthContext";
 import SignerSelect from "../SignerSelect";
+import { todayISO } from "../../utils/format";
 
 // Older nurse notes were structured; join them into text for display/editing.
 function legacyText(n) {
@@ -23,22 +24,26 @@ export default function NurseNoteTab({ patient, readOnly }) {
   const canEdit = !readOnly && canWrite;
   const { notes, hasMore, total, loading, loadMore, addNote, updateNote, deleteNote } = useNotes(patient.id, "nurse");
   const [text, setText] = useState("");
+  const [noteDate, setNoteDate] = useState(todayISO());
   const [author, setAuthor] = useState(user?.name || "");
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
+  const [editDate, setEditDate] = useState("");
 
   const submit = async () => {
     if (!text.trim()) return;
-    await addNote(author, { text: text.trim() });
+    await addNote(author, { text: text.trim(), noteDate });
     setText("");
+    setNoteDate(todayISO());
   };
 
   const startEdit = (n) => {
     setEditingId(n.id);
     setEditText(noteText(n));
+    setEditDate(n.noteDate || todayISO());
   };
   const saveEdit = async (n) => {
-    await updateNote(n.id, n.author, { text: editText.trim() });
+    await updateNote(n.id, n.author, { text: editText.trim(), noteDate: editDate });
     setEditingId(null);
   };
   const remove = async (n) => {
@@ -52,6 +57,10 @@ export default function NurseNoteTab({ patient, readOnly }) {
       <div className="card print-hide">
         <div className="section-title">ลงรายงานประจำวัน (Nurse Note)</div>
         <div className="form-stack-12">
+          <div style={{ maxWidth: 220 }}>
+            <span className="field-label">วันที่</span>
+            <input className="input" type="date" value={noteDate} onChange={(e) => setNoteDate(e.target.value)} />
+          </div>
           <div>
             <span className="field-label">บันทึกอาการ / การดูแล</span>
             <textarea
@@ -78,7 +87,7 @@ export default function NurseNoteTab({ patient, readOnly }) {
             <div className="note-head">
               <span>{n.author}</span>
               <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                {n.date}
+                {n.noteDate || n.date}
                 {canEdit && (
                   <span className="note-admin-actions print-hide">
                     <button className="btn-link btn-link-primary" onClick={() => startEdit(n)}>แก้ไข</button>
@@ -89,6 +98,10 @@ export default function NurseNoteTab({ patient, readOnly }) {
             </div>
             {editingId === n.id ? (
               <div className="form-stack-sm print-hide">
+                <div style={{ maxWidth: 200 }}>
+                  <span className="field-label-sm">วันที่</span>
+                  <input className="input-sm" type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                </div>
                 <textarea className="textarea" style={{ minHeight: 110 }} value={editText} onChange={(e) => setEditText(e.target.value)} />
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="btn-secondary-sm" onClick={() => setEditingId(null)}>ยกเลิก</button>

@@ -2,16 +2,17 @@ import { useState } from "react";
 import { usePatients } from "../../state/PatientsContext";
 import { useAuth } from "../../state/AuthContext";
 import SignerSelect from "../SignerSelect";
-import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS, INHALE_SCHEDULES } from "../../data/constants";
+import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS, INHALE_SCHEDULES, INJECTION_SITES } from "../../data/constants";
 
 const EMPTY_MED = {
   name: "", dose: "",
   strength: "", strengthUnit: "mg", strengthUnitOther: "", form: "เม็ด",
   route: "รับประทาน",
-  timing: "หลังอาหาร", meals: [], mealsOther: "",
+  timing: "", meals: [], mealsOther: "",
   prn: false, prnHours: "",
   perDay: "2", sides: [],
   puff: "", inhaleSchedule: "เช้า",
+  injectionSite: "ใต้ผิวหนัง", injectionSiteOther: "",
   reason: "", signer: "",
 };
 
@@ -37,6 +38,10 @@ function composeFreq(d) {
     const puff = String(d.puff).trim() ? `${String(d.puff).trim()} puff` : "";
     const sched = d.inhaleSchedule === "เมื่อมีอาการ" ? prnText(d) : d.inhaleSchedule;
     return [puff, sched].filter(Boolean).join(" · ");
+  }
+  if (d.route === "ยาฉีด") {
+    const site = d.injectionSite === "อื่นๆ" ? (d.injectionSiteOther.trim() || "ฉีด") : d.injectionSite;
+    return [site, `${d.perDay} ครั้ง/วัน`].filter(Boolean).join(" · ");
   }
   const sides = d.sides.length ? " · ข้าง" + d.sides.join("-") : "";
   return `${d.perDay} ครั้ง/วัน${sides}`;
@@ -186,7 +191,7 @@ export default function MedicationsTab({ patient, readOnly }) {
                     className={medDraft.route === r ? "choice-chip active" : "choice-chip"}
                     onClick={() => setMedDraft((d) => ({ ...d, route: r }))}
                   >
-                    {r === "รับประทาน" ? "💊" : r === "ยาทา" ? "🧴" : r === "ยาหยอดตา" ? "💧" : "💨"} {r}
+                    {r === "รับประทาน" ? "💊" : r === "ยาทา" ? "🧴" : r === "ยาหยอดตา" ? "💧" : r === "ยาพ่น" ? "💨" : "💉"} {r}
                   </button>
                 ))}
               </div>
@@ -195,14 +200,14 @@ export default function MedicationsTab({ patient, readOnly }) {
             {medDraft.route === "รับประทาน" ? (
               <>
                 <div>
-                  <span className="field-label">เวลารับประทาน</span>
+                  <span className="field-label">เวลารับประทาน (ไม่บังคับ — กดซ้ำเพื่อยกเลิก)</span>
                   <div className="choice-chips">
                     {ORAL_TIMINGS.map((t) => (
                       <button
                         key={t}
                         type="button"
                         className={medDraft.timing === t ? "choice-chip active" : "choice-chip"}
-                        onClick={() => setMedDraft((d) => ({ ...d, timing: t }))}
+                        onClick={() => setMedDraft((d) => ({ ...d, timing: d.timing === t ? "" : t }))}
                       >
                         {t}
                       </button>
@@ -273,6 +278,33 @@ export default function MedicationsTab({ patient, readOnly }) {
                     <span className="field-label" style={{ margin: 0 }}>ชม.</span>
                   </div>
                 )}
+              </>
+            ) : medDraft.route === "ยาฉีด" ? (
+              <>
+                <div>
+                  <span className="field-label">ตำแหน่งฉีด</span>
+                  <div className="choice-chips">
+                    {INJECTION_SITES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={medDraft.injectionSite === s ? "choice-chip active" : "choice-chip"}
+                        onClick={() => setMedDraft((d) => ({ ...d, injectionSite: s }))}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  {medDraft.injectionSite === "อื่นๆ" && (
+                    <input className="input" style={{ marginTop: 8, maxWidth: 320 }} placeholder="ระบุตำแหน่ง/วิธีฉีด" value={medDraft.injectionSiteOther} onChange={setMed("injectionSiteOther")} />
+                  )}
+                </div>
+                <div style={{ maxWidth: 220 }}>
+                  <span className="field-label">ความถี่ต่อวัน</span>
+                  <select className="input" value={medDraft.perDay} onChange={setMed("perDay")}>
+                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} ครั้ง/วัน</option>)}
+                  </select>
+                </div>
               </>
             ) : (
               <div className="form-grid-2">
