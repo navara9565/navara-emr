@@ -113,12 +113,12 @@ export function PatientsProvider({ children }) {
       addMedication: (id, draft) => {
         if (!draft.name) return;
         const strengthStr = draft.strength ? `${draft.strength} ${draft.strengthUnit || "mg"}` : "";
-        const usage = [strengthStr, draft.form, draft.dose, draft.route, draft.freq].filter(Boolean).join(" · ");
+        const usage = [strengthStr, draft.dose, draft.route, draft.freq].filter(Boolean).join(" · ");
         mutate(id, "addMedication", (p) => ({
           ...p,
           medications: [
             ...p.medications,
-            { id: "m" + Date.now(), name: draft.name, strength: draft.strength, strengthUnit: draft.strengthUnit, form: draft.form, dose: draft.dose, route: draft.route, freq: draft.freq, prescriber: "แพทย์เจ้าของไข้" },
+            { id: "m" + Date.now(), name: draft.name, strength: draft.strength, strengthUnit: draft.strengthUnit, dose: draft.dose, route: draft.route, freq: draft.freq, prescriber: "แพทย์เจ้าของไข้" },
           ],
           medChangeLog: [
             { date: today(), changeType: "เพิ่มยาใหม่", drugName: draft.name, usage, reason: draft.reason || "-", signer: draft.signer || "-" },

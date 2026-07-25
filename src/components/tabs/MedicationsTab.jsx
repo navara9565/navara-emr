@@ -2,11 +2,11 @@ import { useState } from "react";
 import { usePatients } from "../../state/PatientsContext";
 import { useAuth } from "../../state/AuthContext";
 import SignerSelect from "../SignerSelect";
-import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, MED_FORMS, INHALE_SCHEDULES, INJECTION_SITES } from "../../data/constants";
+import { MED_ROUTES, ORAL_TIMINGS, ORAL_MEALS, DOSE_UNITS, INHALE_SCHEDULES, INJECTION_SITES } from "../../data/constants";
 
 const EMPTY_MED = {
   name: "", dose: "",
-  strength: "", strengthUnit: "mg", strengthUnitOther: "", form: "เม็ด",
+  strength: "", strengthUnit: "mg", strengthUnitOther: "",
   route: "รับประทาน",
   timing: "", meals: [], mealsOther: "",
   prn: false, prnHours: "",
@@ -21,10 +21,9 @@ function prnText(d) {
   return "เมื่อมีอาการ" + (String(d.prnHours).trim() ? ` ทุก ${String(d.prnHours).trim()} ชม.` : "");
 }
 
-// "500 mg · เม็ด" — the strength + form line shown on each medication.
+// "500 mg" — the strength line shown on each medication.
 function strengthText(m) {
-  const s = m.strength ? `${m.strength} ${m.strengthUnit || "mg"}` : "";
-  return [s, m.form].filter(Boolean).join(" · ");
+  return m.strength ? `${m.strength} ${m.strengthUnit || "mg"}` : "";
 }
 
 // Compose the stored freq string from the structured inputs.
@@ -105,7 +104,6 @@ export default function MedicationsTab({ patient, readOnly }) {
       name: medDraft.name,
       strength: medDraft.strength,
       strengthUnit: unit,
-      form: medDraft.form,
       dose: medDraft.dose,
       route: medDraft.route,
       freq: composeFreq(medDraft),
@@ -168,12 +166,6 @@ export default function MedicationsTab({ patient, readOnly }) {
                 {medDraft.strengthUnit === "อื่นๆ" && (
                   <input className="input" style={{ marginTop: 8 }} placeholder="ระบุหน่วย เช่น mcg, IU, ml, %" value={medDraft.strengthUnitOther} onChange={setMed("strengthUnitOther")} />
                 )}
-              </div>
-              <div>
-                <span className="field-label">ชนิดยา</span>
-                <select className="input" value={medDraft.form} onChange={setMed("form")}>
-                  {MED_FORMS.map((f) => <option key={f} value={f}>{f}</option>)}
-                </select>
               </div>
               <div>
                 <span className="field-label">ปริมาณต่อครั้ง</span>
